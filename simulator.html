@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Strategia Betting - Slot A</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 { color: #00d26a; margin-bottom: 10px; }
+        h2 { color: #00d26a; margin: 30px 0 15px; border-bottom: 2px solid #00d26a; padding-bottom: 10px; }
+        h3 { color: #ffa502; margin: 20px 0 10px; }
+
+        .controls {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input, select {
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 5px;
+            color: #fff;
+            font-size: 14px;
+        }
+        input[type="number"] { width: 100%; }
+
+        button {
+            background: linear-gradient(135deg, #00d26a, #00b359);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            margin: 10px 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,210,106,0.3);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,210,106,0.4);
+        }
+        button:active { transform: translateY(0); }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #00d26a;
+            transition: all 0.3s;
+        }
+        .stat-card:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateX(5px);
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00d26a;
+        }
+
+        .results-table {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th {
+            background: rgba(0,210,106,0.2);
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+        tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .positive { color: #00d26a; font-weight: bold; }
+        .negative { color: #ff4757; font-weight: bold; }
+        .warning { color: #ffa502; font-weight: bold; }
+
+        .chart-container {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            height: 400px;
+            position: relative;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #ffa502;
+            font-size: 18px;
+        }
+
+        .recommendation {
+            background: linear-gradient(135deg, rgba(0,210,106,0.2), rgba(0,179,89,0.1));
+            border: 2px solid #00d26a;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .recommendation h3 {
+            color: #00d26a;
+            margin-top: 0;
+        }
+        .recommendation ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        .recommendation li {
+            margin: 8px 0;
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .risk-low { background: #00d26a; color: #000; }
+        .risk-medium { background: #ffa502; color: #000; }
+        .risk-high { background: #ff4757; color: #fff; }
+
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d26a, #00b359);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Simulatore Strategia Betting - Ottimizzazione Slot A</h1>
+        <p style="color: #aaa; margin-bottom: 20px;">
+            Simulatore Monte Carlo per ottimizzare la strategia di betting basato sui dati reali dello Slot A
+        </p>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Win Rate Attuale</div>
+                <div class="stat-value">61.9%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">ROI Attuale</div>
+                <div class="stat-value">2.08%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Performance Attuale</div>
+                <div class="stat-value">+2.44%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Scommesse Analizzate</div>
+                <div class="stat-value">21</div>
+            </div>
+        </div>
+
+        <h2>⚙️ Parametri Simulazione</h2>
+        <div class="controls">
+            <div class="control-group">
+                <label>Cassa Iniziale (€)</label>
+                <input type="number" id="cassaIniziale" value="50" min="10" step="10">
+            </div>
+            <div class="control-group">
+                <label>Win Rate (%)</label>
+                <input type="number" id="winRate" value="61.9" min="0" max="100" step="0.1">
+            </div>
+            <div class="control-group">
+                <label>Numero Simulazioni</label>
+                <input type="number" id="numSimulazioni" value="1000" min="100" max="10000" step="100">
+            </div>
+            <div class="control-group">
+                <label>Numero Scommesse per Simulazione</label>
+                <input type="number" id="numScommesse" value="50" min="10" max="200" step="10">
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="runSimulation()">🚀 Avvia Simulazione Completa</button>
+            <button onclick="runQuickTest()" style="background: linear-gradient(135deg, #3742fa, #2c3dd6);">⚡ Test Rapido (100 sim)</button>
+            <button onclick="findOptimalStrategy()" style="background: linear-gradient(135deg, #ffa502, #e69500);">🎯 Trova Strategia Ottimale</button>
+        </div>
+
+        <div id="progress" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Dati reali dallo Slot A
+        const realData = {
+            winRate: 0.619,
+            avgWinQuota: 1.62,
+            avgLoseQuota: 1.62,
+            cassaIniziale: 50,
+            cassaFinale: 51.22,
+            totalBets: 21,
+            maxDrawdown: -28.84
+        };
+
+        // Funzione per calcolare lo stake con recupero
+        function calculateStake(cassaCorrente, stakePerc, recupero, lastResult, lastStake, quota) {
+            const baseStake = cassaCorrente * (stakePerc / 100);
+
+            if (lastResult === null || lastResult === 'WIN') {
+                return Math.max(baseStake, 1);
+            }
+
+            if (lastResult === 'LOSE') {
+                let multiplier = 1;
+
+                switch(recupero) {
+                    case 'Alto':
+                        multiplier = 1 / (1 - 1/quota) / 1.65;
+                        break;
+                    case 'Basso':
+                        multiplier = 1 / (1 - 1/quota) / 4.65;
+                        break;
+                    default:
+                        multiplier = 1;
+                }
+
+                const recoveryStake = lastStake * multiplier;
+                return Math.max(baseStake, recoveryStake);
+            }
+
+            return baseStake;
+        }
+
+        // Simula una singola sessione
+        function simulateSession(config) {
+            let cassa = config.cassaIniziale;
+            const cassaIniziale = cassa;
+            let lastResult = null;
+            let lastStake = 0;
+            let totalStaked = 0;
+            let totalWinnings = 0;
+            let wins = 0;
+            let losses = 0;
+            let maxDrawdown = 0;
+            let maxCassa = cassa;
+            let bankruptStep = null;
+
+            const cassaHistory = [cassa];
+
+            for (let i = 0; i < config.numScommesse; i++) {
+                // Check stop conditions
+                if (config.stopWin && cassa >= cassaIniziale * (1 + config.stopWin / 100)) {
+                    break;
+                }
+                if (config.stopLose && cassa <= cassaIniziale * (1 - config.stopLose / 100)) {
+                    break;
+                }
+                if (cassa < 1) {
+                    bankruptStep = i;
+                    break;
+                }
+
+                // Calculate stake
+                const stake = calculateStake(cassa, config.stakePerc, config.recupero, lastResult, lastStake, config.quota);
+
+                // Can't bet more than available
+                if (stake > cassa) {
+                    bankruptStep = i;
+                    break;
+                }
+
+                totalStaked += stake;
+
+                // Simulate result
+                const isWin = Math.random() < config.winRate / 100;
+
+                if (isWin) {
+                    const vincita = stake * config.quota;
+                    cassa += (vincita - stake);
+                    totalWinnings += vincita;
+                    wins++;
+                    lastResult = 'WIN';
+                } else {
+                    cassa -= stake;
+                    losses++;
+                    lastResult = 'LOSE';
+                }
+
+                lastStake = stake;
+                cassaHistory.push(cassa);
+
+                // Track max cassa and drawdown
+                if (cassa > maxCassa) maxCassa = cassa;
+                const currentDrawdown = ((cassa - maxCassa) / maxCassa) * 100;
+                if (currentDrawdown < maxDrawdown) maxDrawdown = currentDrawdown;
+            }
+
+            const finalProfit = cassa - cassaIniziale;
+            const finalProfitPerc = (finalProfit / cassaIniziale) * 100;
+            const roi = totalStaked > 0 ? (finalProfit / totalStaked) * 100 : 0;
+
+            return {
+                finalCassa: cassa,
+                finalProfit,
+                finalProfitPerc,
+                roi,
+                totalStaked,
+                totalWinnings,
+                wins,
+                losses,
+                winRate: wins / (wins + losses) * 100,
+                maxDrawdown,
+                bankruptStep,
+                cassaHistory
+            };
+        }
+
+        // Esegui simulazioni multiple
+        function runMultipleSimulations(config, numSims, onProgress) {
+            const results = [];
+
+            for (let i = 0; i < numSims; i++) {
+                results.push(simulateSession(config));
+
+                if (onProgress && i % 10 === 0) {
+                    onProgress((i / numSims) * 100);
+                }
+            }
+
+            // Calcola statistiche aggregate
+            const bankruptCount = results.filter(r => r.bankruptStep !== null).length;
+            const profitableCount = results.filter(r => r.finalProfit > 0).length;
+
+            const avgProfit = results.reduce((sum, r) => sum + r.finalProfit, 0) / results.length;
+            const avgProfitPerc = results.reduce((sum, r) => sum + r.finalProfitPerc, 0) / results.length;
+            const avgROI = results.reduce((sum, r) => sum + r.roi, 0) / results.length;
+            const avgDrawdown = results.reduce((sum, r) => sum + r.maxDrawdown, 0) / results.length;
+
+            const maxProfit = Math.max(...results.map(r => r.finalProfit));
+            const minProfit = Math.min(...results.map(r => r.finalProfit));
+            const medianProfit = results.map(r => r.finalProfit).sort((a, b) => a - b)[Math.floor(results.length / 2)];
+
+            return {
+                config,
+                results,
+                stats: {
+                    numSimulations: numSims,
+                    bankruptCount,
+                    bankruptRate: (bankruptCount / numSims) * 100,
+                    profitableCount,
+                    profitableRate: (profitableCount / numSims) * 100,
+                    avgProfit,
+                    avgProfitPerc,
+                    avgROI,
+                    avgDrawdown,
+                    maxProfit,
+                    minProfit,
+                    medianProfit
+                }
+            };
+        }
+
+        // Simulazione completa
+        function runSimulation() {
+            const config = {
+                cassaIniziale: parseFloat(document.getElementById('cassaIniziale').value),
+                winRate: parseFloat(document.getElementById('winRate').value),
+                numScommesse: parseInt(document.getElementById('numScommesse').value),
+                stakePerc: 2,
+                recupero: 'Alto',
+                quota: 1.6,
+                stopWin: null,
+                stopLose: null
+            };
+
+            const numSims = parseInt(document.getElementById('numSimulazioni').value);
+
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('results').innerHTML = '<div class="loading">Simulazione in corso...</div>';
+
+            setTimeout(() => {
+                const simulation = runMultipleSimulations(config, numSims, (progress) => {
+                    document.getElementById('progressFill').style.width = progress + '%';
+                    document.getElementById('progressFill').textContent = Math.round(progress) + '%';
+                });
+
+                displayResults(simulation);
+                document.getElementById('progress').style.display = 'none';
+            }, 100);
+        }
+
+        // Test rapido
+        function runQuickTest() {
+            document.getElementById('numSimulazioni').value = 100;
+            runSimulation();
+        }
+
+        // Trova strategia ottimale
+        function findOptimalStrategy() {
+            const cassaIniziale = parseFloat(document.getElementById('cassaIniziale').value);
+            const winRate = parseFloat(document.getElementById('winRate').value);
+            const numScommesse = parseInt(document.getElementById('numScommesse').value);
+            const numSims = 500;
+
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('results').innerHTML = '<div class="loading">Ricerca strategia ottimale in corso...</div>';
+
+            const strategies = [];
+            const stakePercs = [2, 3, 4, 5];
+            const recuperos = ['Nessuno', 'Basso', 'Alto'];
+            const quotas = [1.6, 1.7, 1.8, 2.0];
+
+            let totalTests = stakePercs.length * recuperos.length * quotas.length;
+            let completedTests = 0;
+
+            setTimeout(() => {
+                for (const stakePerc of stakePercs) {
+                    for (const recupero of recuperos) {
+                        for (const quota of quotas) {
+                            const config = {
+                                cassaIniziale,
+                                winRate,
+                                numScommesse,
+                                stakePerc,
+                                recupero,
+                                quota,
+                                stopWin: null,
+                                stopLose: 30
+                            };
+
+                            const simulation = runMultipleSimulations(config, numSims);
+                            strategies.push(simulation);
+
+                            completedTests++;
+                            const progress = (completedTests / totalTests) * 100;
+                            document.getElementById('progressFill').style.width = progress + '%';
+                            document.getElementById('progressFill').textContent = Math.round(progress) + '%';
+                        }
+                    }
+                }
+
+                displayOptimalStrategies(strategies);
+                document.getElementById('progress').style.display = 'none';
+            }, 100);
+        }
+
+        // Display results
+        function displayResults(simulation) {
+            const { config, stats } = simulation;
+
+            let html = `
+                <h2>📊 Risultati Simulazione</h2>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Simulazioni Totali</div>
+                        <div class="stat-value">${stats.numSimulations}</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: ${stats.profitableRate >= 70 ? '#00d26a' : stats.profitableRate >= 50 ? '#ffa502' : '#ff4757'}">
+                        <div class="stat-label">Tasso Profitto</div>
+                        <div class="stat-value" style="color: ${stats.profitableRate >= 70 ? '#00d26a' : stats.profitableRate >= 50 ? '#ffa502' : '#ff4757'}">
+                            ${stats.profitableRate.toFixed(1)}%
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Profitto Medio</div>
+                        <div class="stat-value" style="color: ${stats.avgProfit >= 0 ? '#00d26a' : '#ff4757'}">
+                            €${stats.avgProfit.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">ROI Medio</div>
+                        <div class="stat-value" style="color: ${stats.avgROI >= 0 ? '#00d26a' : '#ff4757'}">
+                            ${stats.avgROI.toFixed(2)}%
+                        </div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #ff4757">
+                        <div class="stat-label">Tasso Fallimento</div>
+                        <div class="stat-value" style="color: ${stats.bankruptRate <= 10 ? '#00d26a' : stats.bankruptRate <= 30 ? '#ffa502' : '#ff4757'}">
+                            ${stats.bankruptRate.toFixed(1)}%
+                        </div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #ffa502">
+                        <div class="stat-label">Drawdown Medio</div>
+                        <div class="stat-value" style="color: #ffa502">
+                            ${stats.avgDrawdown.toFixed(1)}%
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Profitto Max</div>
+                        <div class="stat-value" style="color: #00d26a">
+                            €${stats.maxProfit.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Perdita Max</div>
+                        <div class="stat-value" style="color: #ff4757">
+                            €${stats.minProfit.toFixed(2)}
+                        </div>
+                    </div>
+                </div>
+
+                <h3>📋 Configurazione Testata</h3>
+                <div class="results-table">
+                    <table>
+                        <tr>
+                            <th>Parametro</th>
+                            <th>Valore</th>
+                        </tr>
+                        <tr>
+                            <td>Stake %</td>
+                            <td>${config.stakePerc}%</td>
+                        </tr>
+                        <tr>
+                            <td>Modalità Recupero</td>
+                            <td>${config.recupero}</td>
+                        </tr>
+                        <tr>
+                            <td>Quota Media</td>
+                            <td>${config.quota}</td>
+                        </tr>
+                        <tr>
+                            <td>Win Rate</td>
+                            <td>${config.winRate}%</td>
+                        </tr>
+                        <tr>
+                            <td>Cassa Iniziale</td>
+                            <td>€${config.cassaIniziale}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                ${generateRecommendations(simulation)}
+            `;
+
+            document.getElementById('results').innerHTML = html;
+        }
+
+        // Display strategie ottimali
+        function displayOptimalStrategies(strategies) {
+            // Ordina per ROI medio
+            strategies.sort((a, b) => b.stats.avgROI - a.stats.avgROI);
+
+            const top5 = strategies.slice(0, 5);
+
+            let html = `
+                <h2>🏆 Top 5 Strategie Ottimali</h2>
+                <p style="color: #aaa; margin-bottom: 20px;">
+                    Basato su ${strategies[0].stats.numSimulations} simulazioni per configurazione
+                </p>
+
+                <div class="results-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Pos</th>
+                                <th>Stake %</th>
+                                <th>Recupero</th>
+                                <th>Quota</th>
+                                <th>ROI Medio</th>
+                                <th>Profitto Medio</th>
+                                <th>Tasso Profitto</th>
+                                <th>Tasso Fallimento</th>
+                                <th>Drawdown Medio</th>
+                                <th>Rischio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            top5.forEach((strategy, index) => {
+                const { config, stats } = strategy;
+                const risk = stats.bankruptRate > 20 ? 'high' : stats.bankruptRate > 10 ? 'medium' : 'low';
+                const riskLabel = risk === 'high' ? 'Alto' : risk === 'medium' ? 'Medio' : 'Basso';
+
+                html += `
+                    <tr>
+                        <td><strong>${index + 1}</strong></td>
+                        <td>${config.stakePerc}%</td>
+                        <td>${config.recupero}</td>
+                        <td>${config.quota}</td>
+                        <td class="${stats.avgROI >= 0 ? 'positive' : 'negative'}">${stats.avgROI.toFixed(2)}%</td>
+                        <td class="${stats.avgProfit >= 0 ? 'positive' : 'negative'}">€${stats.avgProfit.toFixed(2)}</td>
+                        <td class="${stats.profitableRate >= 70 ? 'positive' : stats.profitableRate >= 50 ? 'warning' : 'negative'}">
+                            ${stats.profitableRate.toFixed(1)}%
+                        </td>
+                        <td class="${stats.bankruptRate <= 10 ? 'positive' : stats.bankruptRate <= 20 ? 'warning' : 'negative'}">
+                            ${stats.bankruptRate.toFixed(1)}%
+                        </td>
+                        <td class="warning">${stats.avgDrawdown.toFixed(1)}%</td>
+                        <td><span class="risk-badge risk-${risk}">${riskLabel}</span></td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+
+                ${generateOptimalRecommendations(top5[0])}
+            `;
+
+            document.getElementById('results').innerHTML = html;
+        }
+
+        // Genera raccomandazioni
+        function generateRecommendations(simulation) {
+            const { stats } = simulation;
+            let recommendations = [];
+
+            if (stats.bankruptRate > 20) {
+                recommendations.push('⚠️ <strong>Rischio fallimento troppo alto!</strong> Riduci la modalità di recupero o aumenta la cassa iniziale.');
+            }
+
+            if (stats.avgDrawdown < -30) {
+                recommendations.push('⚠️ <strong>Drawdown eccessivo!</strong> Imposta uno Stop Loss al -25% per limitare le perdite.');
+            }
+
+            if (stats.avgROI < 5) {
+                recommendations.push('💡 Considera di aumentare la quota media delle scommesse a 1.7-1.8 per migliorare il ROI.');
+            }
+
+            if (stats.profitableRate < 60) {
+                recommendations.push('📉 <strong>Tasso di profitto basso.</strong> Rivedi la selezione delle scommesse o aumenta il win rate.');
+            } else if (stats.profitableRate > 70) {
+                recommendations.push('✅ <strong>Ottimo tasso di profitto!</strong> La strategia è sostenibile.');
+            }
+
+            if (stats.avgProfit > 0 && stats.bankruptRate < 15) {
+                recommendations.push('✅ Strategia profittevole con rischio accettabile. Considera di aumentare leggermente lo stake % per accelerare i profitti.');
+            }
+
+            if (recommendations.length === 0) {
+                recommendations.push('✅ Strategia equilibrata con risultati accettabili.');
+            }
+
+            return `
+                <div class="recommendation">
+                    <h3>💡 Raccomandazioni</h3>
+                    <ul>
+                        ${recommendations.map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        // Genera raccomandazioni per strategia ottimale
+        function generateOptimalRecommendations(optimalStrategy) {
+            const { config, stats } = optimalStrategy;
+
+            return `
+                <div class="recommendation">
+                    <h3>🎯 Strategia Ottimale Consigliata</h3>
+                    <p>Basato su ${stats.numSimulations} simulazioni, questa è la configurazione che massimizza il ROI con rischio controllato:</p>
+                    <ul>
+                        <li><strong>Stake Percentuale:</strong> ${config.stakePerc}% della cassa</li>
+                        <li><strong>Modalità Recupero:</strong> ${config.recupero}</li>
+                        <li><strong>Quota Target:</strong> ${config.quota} (seleziona scommesse con quote simili)</li>
+                        <li><strong>Stop Loss:</strong> Imposta a -30% (€${(config.cassaIniziale * 0.7).toFixed(2)})</li>
+                        <li><strong>ROI Atteso:</strong> <span class="positive">${stats.avgROI.toFixed(2)}%</span></li>
+                        <li><strong>Profitto Medio Atteso (50 bet):</strong> <span class="positive">€${stats.avgProfit.toFixed(2)}</span></li>
+                        <li><strong>Probabilità di Profitto:</strong> <span class="${stats.profitableRate >= 70 ? 'positive' : 'warning'}">${stats.profitableRate.toFixed(1)}%</span></li>
+                        <li><strong>Rischio Fallimento:</strong> <span class="${stats.bankruptRate <= 10 ? 'positive' : 'warning'}">${stats.bankruptRate.toFixed(1)}%</span></li>
+                    </ul>
+
+                    <h4 style="margin-top: 20px; color: #00d26a;">📈 Come Approfittare della Fase Positiva:</h4>
+                    <ul>
+                        <li>Con win rate al 61.9%, puoi permetterti di essere più aggressivo</li>
+                        <li>Aumenta lo stake al ${config.stakePerc}% per accelerare il consolidamento</li>
+                        <li>Mantieni quota media a ${config.quota} per equilibrio rischio/rendimento</li>
+                        <li>Usa recupero "${config.recupero}" per gestire le serie negative</li>
+                        <li><strong>Obiettivo realistico:</strong> +${stats.avgProfitPerc.toFixed(1)}% in ${config.numScommesse} scommesse</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        // Auto-run quick test on load
+        window.addEventListener('load', () => {
+            console.log('Simulatore caricato. Pronto per l\'analisi!');
+        });
+    </script>
+</body>
+</html>

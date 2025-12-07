@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Formula Esatta - Magic Over</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        h1 { color: #00d26a; margin-bottom: 10px; font-size: 2rem; }
+        h2 { color: #00d26a; margin: 30px 0 15px; border-bottom: 2px solid #00d26a; padding-bottom: 10px; }
+        h3 { color: #ffa502; margin: 20px 0 10px; }
+
+        .alert {
+            background: linear-gradient(135deg, rgba(0,210,106,0.2), rgba(0,179,89,0.1));
+            border: 2px solid #00d26a;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .alert strong { color: #00d26a; }
+
+        .controls {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input, select {
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 5px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00d26a, #00b359);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            margin: 10px 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,210,106,0.3);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,210,106,0.4);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #00d26a;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00d26a;
+        }
+
+        .results-table {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th {
+            background: rgba(0,210,106,0.2);
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .positive { color: #00d26a; font-weight: bold; }
+        .negative { color: #ff4757; font-weight: bold; }
+        .warning { color: #ffa502; font-weight: bold; }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #ffa502;
+            font-size: 18px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d26a, #00b359);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .risk-low { background: #00d26a; color: #000; }
+        .risk-medium { background: #ffa502; color: #000; }
+        .risk-high { background: #ff4757; color: #fff; }
+
+        .code-block {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+
+        .recommendation {
+            background: linear-gradient(135deg, rgba(0,210,106,0.2), rgba(0,179,89,0.1));
+            border: 2px solid #00d26a;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Simulatore Formula Esatta - Magic Over</h1>
+        <p style="color: #aaa; margin-bottom: 20px;">
+            Simulazione Monte Carlo usando la FORMULA EXCEL REALE dell'app
+        </p>
+
+        <div class="alert">
+            <strong>✅ Formula Implementata:</strong> Questo simulatore usa la stessa identica formula <code>calculateStake()</code>
+            del tuo file index.html, con tutte le logiche di recupero (Alto/Basso/Nessuno), media armonica, soglie N93, ecc.<br><br>
+            <strong>🆕 NUOVO:</strong> Ora puoi testare anche il parametro "Divisore Soglia" (il "3" nella formula <code>quotaMedia + 3</code>).
+            Il simulatore testerà valori da 2 a 5 per trovare l'ottimale!
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Win Rate Dati Reali</div>
+                <div class="stat-value">61.9%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Scommesse Analizzate</div>
+                <div class="stat-value">21</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">ROI Attuale</div>
+                <div class="stat-value">2.08%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Performance Attuale</div>
+                <div class="stat-value">+2.44%</div>
+            </div>
+        </div>
+
+        <h2>⚙️ Parametri Simulazione</h2>
+        <div class="controls">
+            <div class="control-group">
+                <label>Win Rate (%)</label>
+                <input type="number" id="winRate" value="61.9" min="0" max="100" step="0.1">
+            </div>
+            <div class="control-group">
+                <label>Numero Simulazioni</label>
+                <input type="number" id="numSimulazioni" value="1000" min="100" max="10000" step="100">
+            </div>
+            <div class="control-group">
+                <label>Numero Scommesse per Simulazione</label>
+                <input type="number" id="numScommesse" value="50" min="10" max="200" step="10">
+            </div>
+            <div class="control-group">
+                <label>Distribuzione Quote</label>
+                <select id="quotaDist">
+                    <option value="fixed_1.6">Fissa 1.6 (come ora)</option>
+                    <option value="fixed_1.7">Fissa 1.7</option>
+                    <option value="fixed_1.8">Fissa 1.8</option>
+                    <option value="random_1.6_2.0">Random 1.6-2.0</option>
+                    <option value="random_1.7_1.9">Random 1.7-1.9</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="findOptimalFormula()">🎯 Trova Formula Ottimale</button>
+            <button onclick="testCurrentConfig()" style="background: linear-gradient(135deg, #3742fa, #2c3dd6);">
+                📊 Testa Configurazione Attuale
+            </button>
+        </div>
+
+        <div id="progress" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // ============================================
+        // FORMULA ESATTA DA index.html
+        // ============================================
+
+        // Media armonica (linee 392-396 di index.html)
+        function harmonicMean(values) {
+            const valid = values.filter(v => v > 0);
+            if (valid.length === 0) return 1.65;
+            return valid.length / valid.reduce((sum, v) => sum + (1 / v), 0);
+        }
+
+        // Calcola stake - FORMULA ESATTA (linee 399-458 di index.html)
+        // CON PARAMETRO DIVISORE SOGLIA MODIFICABILE
+        function calculateStake(slot, slotBets, newQuota = 1.65) {
+            const stakePerc = slot.stakePerc || 0.02;
+            const cassaCorrente = slot.cassaCorrente || 50;
+            const quotaMedia = slot.quotaMediaFormula || 1.65; // Parametro della formula
+            const divisoreSoglia = slot.divisoreSoglia || 3;    // NUOVO PARAMETRO (era hardcoded a 3)
+
+            // Stake base minimo
+            const stakeBase = stakePerc * cassaCorrente;
+
+            // Se non ci sono scommesse, ritorna stake base
+            if (!slotBets || slotBets.length === 0) {
+                return Math.round(stakeBase * 10) / 10;
+            }
+
+            const lastBet = slotBets[slotBets.length - 1];
+            const stakePrecedente = lastBet.stake;
+            const esitoPrecedente = lastBet.esito;
+            const quotaPrec = lastBet.quota || quotaMedia;
+            const guadagnoPrec = lastBet.guadagno || 0;
+
+            // Media armonica della quota nuova
+            const mediaArmonicaNuova = newQuota;
+
+            // Media armonica di TUTTE le quote
+            const tutteQuote = slotBets.map(b => b.quota).filter(q => q > 0);
+            const mediaArmonicaTutte = harmonicMean(tutteQuote);
+
+            // Percentuale guadagno attuale
+            const profitto = cassaCorrente - slot.cassaIniziale;
+            const guadagnoPercent = profitto / slot.cassaIniziale;
+
+            // N93 = soglia
+            const numScommesse = slotBets.length;
+            const N93 = (stakePerc / quotaMedia) * numScommesse / 1.65 / mediaArmonicaTutte;
+
+            // Fattore: (1 - 1/quota)
+            const fattore = 1 - (1 / mediaArmonicaNuova);
+
+            let stakeCalcolato;
+
+            if (esitoPrecedente === 'LOSE') {
+                // Dopo LOSE: stake = stake_prec / (1 - 1/quota) / quotaMedia
+                stakeCalcolato = stakePrecedente / fattore / quotaMedia;
+            } else if (guadagnoPercent < N93) {
+                // Sotto soglia N93: stake = stake_prec / (1 - 1/quota) / (quotaMedia + divisoreSoglia)
+                // PARAMETRO MODIFICABILE: divisoreSoglia (default 3)
+                stakeCalcolato = stakePrecedente / fattore / (quotaMedia + divisoreSoglia);
+            } else {
+                // Sopra soglia: formula reset
+                const mediaInterna = ((quotaPrec - 1) + (quotaMedia - 2) + quotaPrec + 1) / 4;
+                const parte1 = cassaCorrente * stakePerc;
+                const parte2 = guadagnoPrec * mediaInterna;
+                stakeCalcolato = (parte1 + parte2) / 2;
+            }
+
+            // MAX tra stake base e calcolato
+            const stakeFinal = Math.max(stakeBase, stakeCalcolato);
+
+            // Arrotonda a 1 decimale
+            return Math.round(stakeFinal * 10) / 10;
+        }
+
+        // Genera quota random basata sulla distribuzione
+        function getRandomQuota(distribution) {
+            switch(distribution) {
+                case 'fixed_1.6': return 1.6;
+                case 'fixed_1.7': return 1.7;
+                case 'fixed_1.8': return 1.8;
+                case 'random_1.6_2.0':
+                    return Math.round((1.6 + Math.random() * 0.4) * 100) / 100;
+                case 'random_1.7_1.9':
+                    return Math.round((1.7 + Math.random() * 0.2) * 100) / 100;
+                default: return 1.6;
+            }
+        }
+
+        // Simula una singola sessione con FORMULA ESATTA
+        function simulateSession(config) {
+            const slot = {
+                cassaIniziale: config.cassaIniziale,
+                cassaCorrente: config.cassaIniziale,
+                stakePerc: config.stakePerc,
+                quotaMediaFormula: config.quotaMediaFormula,
+                divisoreSoglia: config.divisoreSoglia || 3,  // NUOVO PARAMETRO
+                recupero: config.recupero
+            };
+
+            const slotBets = [];
+            let maxDrawdown = 0;
+            let maxCassa = slot.cassaIniziale;
+            let bankruptStep = null;
+
+            const cassaHistory = [slot.cassaCorrente];
+
+            for (let i = 0; i < config.numScommesse; i++) {
+                // Check bankruptcy
+                if (slot.cassaCorrente < 1) {
+                    bankruptStep = i;
+                    break;
+                }
+
+                // Stop loss/win
+                if (config.stopLose && slot.cassaCorrente <= slot.cassaIniziale * (1 - config.stopLose / 100)) {
+                    break;
+                }
+                if (config.stopWin && slot.cassaCorrente >= slot.cassaIniziale * (1 + config.stopWin / 100)) {
+                    break;
+                }
+
+                // Generate random quota
+                const quota = getRandomQuota(config.quotaDist);
+
+                // Calculate stake using EXACT formula
+                let stake = calculateStake(slot, slotBets, quota);
+
+                // Apply recovery logic "Alto" (linee 577-582 di index.html)
+                if (config.recupero === 'Alto' && slotBets.length > 0) {
+                    const lastBet = slotBets[slotBets.length - 1];
+                    if (lastBet.esito === 'LOSE') {
+                        stake = Math.min(lastBet.stake * 1.6, slot.cassaCorrente * 0.3);
+                    }
+                }
+
+                // Can't bet more than available
+                if (stake > slot.cassaCorrente) {
+                    bankruptStep = i;
+                    break;
+                }
+
+                const preCassa = slot.cassaCorrente;
+
+                // Simulate result
+                const isWin = Math.random() < (config.winRate / 100);
+                const esito = isWin ? 'WIN' : 'LOSE';
+
+                let vincita = 0;
+                let guadagno = 0;
+
+                if (esito === 'WIN') {
+                    vincita = stake * quota;
+                    guadagno = vincita - stake;
+                } else {
+                    vincita = 0;
+                    guadagno = -stake;
+                }
+
+                slot.cassaCorrente += guadagno;
+
+                // Save bet
+                slotBets.push({
+                    step: i + 1,
+                    quota,
+                    stake,
+                    esito,
+                    vincita,
+                    guadagno,
+                    preCassa,
+                    postCassa: slot.cassaCorrente
+                });
+
+                cassaHistory.push(slot.cassaCorrente);
+
+                // Track drawdown
+                if (slot.cassaCorrente > maxCassa) maxCassa = slot.cassaCorrente;
+                const currentDrawdown = ((slot.cassaCorrente - maxCassa) / maxCassa) * 100;
+                if (currentDrawdown < maxDrawdown) maxDrawdown = currentDrawdown;
+            }
+
+            const finalProfit = slot.cassaCorrente - slot.cassaIniziale;
+            const finalProfitPerc = (finalProfit / slot.cassaIniziale) * 100;
+            const totalStaked = slotBets.reduce((sum, b) => sum + b.stake, 0);
+            const roi = totalStaked > 0 ? (finalProfit / totalStaked) * 100 : 0;
+            const wins = slotBets.filter(b => b.esito === 'WIN').length;
+            const losses = slotBets.filter(b => b.esito === 'LOSE').length;
+
+            return {
+                finalCassa: slot.cassaCorrente,
+                finalProfit,
+                finalProfitPerc,
+                roi,
+                totalStaked,
+                wins,
+                losses,
+                winRate: wins / (wins + losses) * 100,
+                maxDrawdown,
+                bankruptStep,
+                cassaHistory,
+                numBets: slotBets.length
+            };
+        }
+
+        // Run multiple simulations
+        function runMultipleSimulations(config, numSims, onProgress) {
+            const results = [];
+
+            for (let i = 0; i < numSims; i++) {
+                results.push(simulateSession(config));
+
+                if (onProgress && i % 10 === 0) {
+                    onProgress((i / numSims) * 100);
+                }
+            }
+
+            const bankruptCount = results.filter(r => r.bankruptStep !== null).length;
+            const profitableCount = results.filter(r => r.finalProfit > 0).length;
+
+            const avgProfit = results.reduce((sum, r) => sum + r.finalProfit, 0) / results.length;
+            const avgProfitPerc = results.reduce((sum, r) => sum + r.finalProfitPerc, 0) / results.length;
+            const avgROI = results.reduce((sum, r) => sum + r.roi, 0) / results.length;
+            const avgDrawdown = results.reduce((sum, r) => sum + r.maxDrawdown, 0) / results.length;
+
+            const maxProfit = Math.max(...results.map(r => r.finalProfit));
+            const minProfit = Math.min(...results.map(r => r.finalProfit));
+            const medianProfit = results.map(r => r.finalProfit).sort((a, b) => a - b)[Math.floor(results.length / 2)];
+
+            return {
+                config,
+                results,
+                stats: {
+                    numSimulations: numSims,
+                    bankruptCount,
+                    bankruptRate: (bankruptCount / numSims) * 100,
+                    profitableCount,
+                    profitableRate: (profitableCount / numSims) * 100,
+                    avgProfit,
+                    avgProfitPerc,
+                    avgROI,
+                    avgDrawdown,
+                    maxProfit,
+                    minProfit,
+                    medianProfit
+                }
+            };
+        }
+
+        // Test current configuration
+        function testCurrentConfig() {
+            const config = {
+                cassaIniziale: 50,
+                stakePerc: 0.02,
+                quotaMediaFormula: 1.65,
+                divisoreSoglia: 3,  // Valore attuale nel codice
+                recupero: 'Alto',
+                winRate: parseFloat(document.getElementById('winRate').value),
+                numScommesse: parseInt(document.getElementById('numScommesse').value),
+                quotaDist: document.getElementById('quotaDist').value,
+                stopLose: 30,
+                stopWin: null
+            };
+
+            const numSims = parseInt(document.getElementById('numSimulazioni').value);
+
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('results').innerHTML = '<div class="loading">Simulazione in corso...</div>';
+
+            setTimeout(() => {
+                const simulation = runMultipleSimulations(config, numSims, (progress) => {
+                    document.getElementById('progressFill').style.width = progress + '%';
+                    document.getElementById('progressFill').textContent = Math.round(progress) + '%';
+                });
+
+                displaySingleResult(simulation, "Configurazione Attuale");
+                document.getElementById('progress').style.display = 'none';
+            }, 100);
+        }
+
+        // Find optimal formula
+        function findOptimalFormula() {
+            const cassaIniziale = 50;
+            const winRate = parseFloat(document.getElementById('winRate').value);
+            const numScommesse = parseInt(document.getElementById('numScommesse').value);
+            const quotaDist = document.getElementById('quotaDist').value;
+            const numSims = Math.min(500, parseInt(document.getElementById('numSimulazioni').value));
+
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('results').innerHTML = '<div class="loading">🔬 Ricerca formula ottimale in corso...</div>';
+
+            const strategies = [];
+
+            // Parametri da testare
+            const stakePercs = [0.02, 0.03, 0.04, 0.05];
+            const quotaMedias = [1.6, 1.65, 1.7, 1.8];
+            const divisoreSoglias = [2, 3, 4, 5];  // NUOVO: Testa valori diversi dal 3
+            const recuperos = ['Nessuno', 'Alto'];
+
+            let totalTests = stakePercs.length * quotaMedias.length * divisoreSoglias.length * recuperos.length;
+            let completedTests = 0;
+
+            setTimeout(() => {
+                for (const stakePerc of stakePercs) {
+                    for (const quotaMediaFormula of quotaMedias) {
+                        for (const divisoreSoglia of divisoreSoglias) {
+                            for (const recupero of recuperos) {
+                                const config = {
+                                    cassaIniziale,
+                                    stakePerc,
+                                    quotaMediaFormula,
+                                    divisoreSoglia,  // NUOVO PARAMETRO
+                                    recupero,
+                                    winRate,
+                                    numScommesse,
+                                    quotaDist,
+                                    stopLose: 30,
+                                    stopWin: null
+                                };
+
+                                const simulation = runMultipleSimulations(config, numSims);
+                                strategies.push(simulation);
+
+                                completedTests++;
+                                const progress = (completedTests / totalTests) * 100;
+                                document.getElementById('progressFill').style.width = progress + '%';
+                                document.getElementById('progressFill').textContent = Math.round(progress) + '%';
+                            }
+                        }
+                    }
+                }
+
+                displayOptimalResults(strategies);
+                document.getElementById('progress').style.display = 'none';
+            }, 100);
+        }
+
+        // Display single result
+        function displaySingleResult(simulation, title) {
+            const { config, stats } = simulation;
+
+            let html = `
+                <h2>📊 ${title}</h2>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Simulazioni</div>
+                        <div class="stat-value">${stats.numSimulations}</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: ${stats.profitableRate >= 70 ? '#00d26a' : stats.profitableRate >= 50 ? '#ffa502' : '#ff4757'}">
+                        <div class="stat-label">Tasso Profitto</div>
+                        <div class="stat-value" style="color: ${stats.profitableRate >= 70 ? '#00d26a' : stats.profitableRate >= 50 ? '#ffa502' : '#ff4757'}">
+                            ${stats.profitableRate.toFixed(1)}%
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Profitto Medio</div>
+                        <div class="stat-value" style="color: ${stats.avgProfit >= 0 ? '#00d26a' : '#ff4757'}">
+                            €${stats.avgProfit.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">ROI Medio</div>
+                        <div class="stat-value" style="color: ${stats.avgROI >= 0 ? '#00d26a' : '#ff4757'}">
+                            ${stats.avgROI.toFixed(2)}%
+                        </div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #ff4757">
+                        <div class="stat-label">Tasso Fallimento</div>
+                        <div class="stat-value" style="color: ${stats.bankruptRate <= 10 ? '#00d26a' : stats.bankruptRate <= 30 ? '#ffa502' : '#ff4757'}">
+                            ${stats.bankruptRate.toFixed(1)}%
+                        </div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #ffa502">
+                        <div class="stat-label">Drawdown Medio</div>
+                        <div class="stat-value" style="color: #ffa502">
+                            ${stats.avgDrawdown.toFixed(1)}%
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Profitto Mediano</div>
+                        <div class="stat-value" style="color: ${stats.medianProfit >= 0 ? '#00d26a' : '#ff4757'}">
+                            €${stats.medianProfit.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Range Profitto</div>
+                        <div class="stat-value" style="font-size: 16px;">
+                            €${stats.minProfit.toFixed(0)} / €${stats.maxProfit.toFixed(0)}
+                        </div>
+                    </div>
+                </div>
+
+                <h3>⚙️ Parametri Formula Testata</h3>
+                <div class="code-block">
+stakePerc: ${(config.stakePerc * 100).toFixed(0)}%
+quotaMediaFormula: ${config.quotaMediaFormula}
+divisoreSoglia: ${config.divisoreSoglia || 3} (nel codice: quotaMedia + ${config.divisoreSoglia || 3})
+recupero: "${config.recupero}"
+cassaIniziale: €${config.cassaIniziale}
+stopLose: ${config.stopLose || 'Non impostato'}
+quotaDist: ${config.quotaDist}
+                </div>
+            `;
+
+            document.getElementById('results').innerHTML = html;
+        }
+
+        // Display optimal results
+        function displayOptimalResults(strategies) {
+            // Sort by ROI
+            strategies.sort((a, b) => b.stats.avgROI - a.stats.avgROI);
+
+            const top10 = strategies.slice(0, 10);
+
+            let html = `
+                <h2>🏆 Top 10 Formule Ottimali</h2>
+                <p style="color: #aaa; margin-bottom: 20px;">
+                    Basato su ${strategies[0].stats.numSimulations} simulazioni per configurazione
+                    (totale ${strategies.length} configurazioni testate)
+                </p>
+
+                <div class="results-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Pos</th>
+                                <th>Stake %</th>
+                                <th>Quota Media</th>
+                                <th>Divisore Soglia</th>
+                                <th>Recupero</th>
+                                <th>ROI Medio</th>
+                                <th>Profitto Medio</th>
+                                <th>Profitto %</th>
+                                <th>Tasso Profitto</th>
+                                <th>Tasso Fallimento</th>
+                                <th>Drawdown</th>
+                                <th>Rischio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            top10.forEach((strategy, index) => {
+                const { config, stats } = strategy;
+                const risk = stats.bankruptRate > 20 ? 'high' : stats.bankruptRate > 10 ? 'medium' : 'low';
+                const riskLabel = risk === 'high' ? 'Alto' : risk === 'medium' ? 'Medio' : 'Basso';
+
+                html += `
+                    <tr>
+                        <td><strong>${index + 1}</strong></td>
+                        <td>${(config.stakePerc * 100).toFixed(0)}%</td>
+                        <td>${config.quotaMediaFormula}</td>
+                        <td><strong>${config.divisoreSoglia || 3}</strong></td>
+                        <td>${config.recupero}</td>
+                        <td class="${stats.avgROI >= 0 ? 'positive' : 'negative'}">${stats.avgROI.toFixed(2)}%</td>
+                        <td class="${stats.avgProfit >= 0 ? 'positive' : 'negative'}">€${stats.avgProfit.toFixed(2)}</td>
+                        <td class="${stats.avgProfitPerc >= 0 ? 'positive' : 'negative'}">${stats.avgProfitPerc.toFixed(1)}%</td>
+                        <td class="${stats.profitableRate >= 70 ? 'positive' : stats.profitableRate >= 50 ? 'warning' : 'negative'}">
+                            ${stats.profitableRate.toFixed(1)}%
+                        </td>
+                        <td class="${stats.bankruptRate <= 10 ? 'positive' : stats.bankruptRate <= 20 ? 'warning' : 'negative'}">
+                            ${stats.bankruptRate.toFixed(1)}%
+                        </td>
+                        <td class="warning">${stats.avgDrawdown.toFixed(1)}%</td>
+                        <td><span class="risk-badge risk-${risk}">${riskLabel}</span></td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+
+                ${generateRecommendation(top10[0])}
+            `;
+
+            document.getElementById('results').innerHTML = html;
+        }
+
+        // Generate recommendation
+        function generateRecommendation(optimal) {
+            const { config, stats } = optimal;
+
+            const currentConfig = {
+                stakePerc: 0.02,
+                quotaMediaFormula: 1.65,
+                divisoreSoglia: 3,
+                recupero: 'Alto'
+            };
+
+            return `
+                <div class="recommendation">
+                    <h3>🎯 Formula Ottimale Consigliata</h3>
+                    <p>Questa configurazione massimizza il ROI con rischio controllato basato sui tuoi dati reali (win rate 61.9%):</p>
+
+                    <h4 style="margin-top: 20px; color: #00d26a;">📝 Parametri da Modificare nell'App:</h4>
+                    <div class="stats-grid" style="margin: 15px 0;">
+                        <div class="stat-card">
+                            <div class="stat-label">Stake %</div>
+                            <div class="stat-value" style="font-size: 20px;">
+                                ${(currentConfig.stakePerc * 100)}% → <span style="color: #00d26a;">${(config.stakePerc * 100).toFixed(0)}%</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Quota Media Formula</div>
+                            <div class="stat-value" style="font-size: 20px;">
+                                ${currentConfig.quotaMediaFormula} → <span style="color: #00d26a;">${config.quotaMediaFormula}</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Divisore Soglia</div>
+                            <div class="stat-value" style="font-size: 20px;">
+                                ${currentConfig.divisoreSoglia || 3} → <span style="color: #00d26a;">${config.divisoreSoglia || 3}</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Modalità Recupero</div>
+                            <div class="stat-value" style="font-size: 20px;">
+                                ${currentConfig.recupero} → <span style="color: #00d26a;">${config.recupero}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top: 20px; color: #00d26a;">📈 Risultati Attesi (${config.numScommesse} scommesse):</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px; line-height: 2;">
+                        <li><strong>ROI Medio:</strong> <span class="positive">${stats.avgROI.toFixed(2)}%</span></li>
+                        <li><strong>Profitto Medio:</strong> <span class="positive">€${stats.avgProfit.toFixed(2)} (+${stats.avgProfitPerc.toFixed(1)}%)</span></li>
+                        <li><strong>Probabilità di Profitto:</strong> <span class="${stats.profitableRate >= 70 ? 'positive' : 'warning'}">${stats.profitableRate.toFixed(1)}%</span></li>
+                        <li><strong>Rischio Fallimento:</strong> <span class="${stats.bankruptRate <= 10 ? 'positive' : 'warning'}">${stats.bankruptRate.toFixed(1)}%</span></li>
+                        <li><strong>Drawdown Medio:</strong> <span class="warning">${stats.avgDrawdown.toFixed(1)}%</span></li>
+                    </ul>
+
+                    <h4 style="margin-top: 20px; color: #ffa502;">⚠️ IMPORTANTE - Come Modificare il Codice:</h4>
+                    <p>I parametri "Quota Media Formula" e "Divisore Soglia" NON sono modificabili dall'interfaccia. Devi modificare il codice <code>index.html</code>:</p>
+                    <div class="code-block">
+// Linea 402 - Quota Media Formula:
+const quotaMedia = 1.65;  // ← Cambia a: ${config.quotaMediaFormula}
+
+// Linea 443 - Divisore Soglia (cerca "quotaMedia + 3"):
+stakeCalcolato = stakePrecedente / fattore / (quotaMedia + 3);
+// ↑ Cambia il "3" a: ${config.divisoreSoglia || 3}
+
+// RISULTATO:
+stakeCalcolato = stakePrecedente / fattore / (quotaMedia + ${config.divisoreSoglia || 3});
+                    </div>
+                    <p style="margin-top: 10px;"><strong>Come trovare il codice:</strong></p>
+                    <ul style="margin-left: 20px; line-height: 1.8;">
+                        <li>Apri <code>index.html</code> con un editor di testo</li>
+                        <li>Cerca "quotaMedia = 1.65" per modificare la quota media</li>
+                        <li>Cerca "quotaMedia + 3" per modificare il divisore soglia</li>
+                        <li>Salva e ricarica l'app (Ctrl+F5)</li>
+                    </ul>
+                    <p style="margin-top: 10px;">Gli altri parametri (Stake % e Recupero) si modificano dalle impostazioni dell'app.</p>
+                </div>
+            `;
+        }
+
+        console.log('✅ Simulatore Formula Esatta caricato');
+    </script>
+</body>
+</html>

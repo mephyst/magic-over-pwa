@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Magic Over">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Magic Over - Betting Manager</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        :root {
+            --green: #00d26a;
+            --red: #ff4757;
+            --yellow: #ffa502;
+            --blue: #3742fa;
+            --card-bg: rgba(255,255,255,0.05);
+        }
+        .app { padding-bottom: 70px; }
+        .header {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        .header h1 { font-size: 1.5rem; color: var(--green); }
+        .header .subtitle { font-size: 0.8rem; opacity: 0.7; }
+        .tabs {
+            display: flex;
+            overflow-x: auto;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            gap: 8px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: var(--card-bg);
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .tab.active { background: var(--green); color: #000; font-weight: bold; }
+        .tab.critical { border: 2px solid var(--red); }
+        .tab.attention { border: 2px solid var(--yellow); }
+        .content { padding: 15px; }
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(5px);
+        }
+        .card-title { font-size: 0.85rem; opacity: 0.7; margin-bottom: 5px; }
+        .card-value { font-size: 1.8rem; font-weight: bold; }
+        .card-value.positive { color: var(--green); }
+        .card-value.negative { color: var(--red); }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .stats-row:last-child { border-bottom: none; }
+        .slot-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .slot-card.ok { border-left: 4px solid var(--green); }
+        .slot-card.attenzione { border-left: 4px solid var(--yellow); }
+        .slot-card.critico { border-left: 4px solid var(--red); }
+        .slot-name { font-weight: bold; font-size: 1.2rem; }
+        .slot-perf { font-size: 0.9rem; }
+        .bet-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .bet-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .bet-step {
+            background: var(--blue);
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        .bet-date { font-size: 0.75rem; opacity: 0.6; }
+        .bet-event { font-size: 0.9rem; margin-bottom: 8px; }
+        .bet-details { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; }
+        .bet-tag {
+            background: rgba(255,255,255,0.1);
+            padding: 3px 8px;
+            border-radius: 5px;
+        }
+        .bet-result { padding: 3px 10px; border-radius: 5px; font-weight: bold; }
+        .bet-result.win { background: var(--green); color: #000; }
+        .bet-result.lose { background: var(--red); }
+        .bet-result.nulla { background: var(--yellow); color: #000; }
+        .bet-result.halfwin { background: #00b894; color: #000; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; opacity: 0.8; }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1rem;
+        }
+        .input-group select option {
+            background: #1a1a2e;
+            color: #fff;
+            padding: 10px;
+        }
+        select option {
+            background: #1a1a2e;
+            color: #fff;
+            padding: 10px;
+        }
+        select {
+            color: #fff;
+        }
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: var(--green);
+        }
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: var(--green); color: #000; }
+        .btn-danger { background: var(--red); color: #fff; }
+        .btn-secondary { background: rgba(255,255,255,0.2); color: #fff; }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            backdrop-filter: blur(10px);
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #888;
+            font-size: 0.7rem;
+            cursor: pointer;
+            padding: 5px 15px;
+        }
+        .nav-item.active { color: var(--green); }
+        .nav-icon { font-size: 1.4rem; margin-bottom: 3px; }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal {
+            background: #1a1a2e;
+            border-radius: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-title { font-size: 1.2rem; margin-bottom: 20px; text-align: center; }
+        .empty-state { text-align: center; padding: 40px 20px; opacity: 0.6; }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .badge.ok { background: var(--green); color: #000; }
+        .badge.attenzione { background: var(--yellow); color: #000; }
+        .badge.critico { background: var(--red); }
+
+        /* Badge stati scommessa */
+        .bet-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 6px;
+        }
+        /* Badge più compatto nei tab */
+        .tab .bet-badge {
+            padding: 2px 6px;
+            font-size: 0.65rem;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .bet-badge.in-corso {
+            background: rgba(33, 150, 243, 0.3);
+            border: 1px solid #2196F3;
+            color: #64B5F6;
+        }
+        .bet-badge.win {
+            background: rgba(0, 210, 106, 0.3);
+            border: 1px solid var(--green);
+            color: var(--green);
+        }
+        .bet-badge.lose {
+            background: rgba(255, 71, 87, 0.3);
+            border: 1px solid var(--red);
+            color: #FF6B7A;
+        }
+        .bet-badge.half-win {
+            background: rgba(255, 165, 0, 0.3);
+            border: 1px solid #FFA500;
+            color: #FFB84D;
+        }
+        .bet-badge.nulla {
+            background: rgba(158, 158, 158, 0.3);
+            border: 1px solid #9E9E9E;
+            color: #BDBDBD;
+        }
+        .progress-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-fill { height: 100%; transition: width 0.3s; }
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--green);
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: bold;
+            z-index: 1001;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .toggle {
+            width: 50px;
+            height: 26px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .toggle.on { background: var(--green); }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: #fff;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+        .toggle.on::after { left: 26px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDnKMAKN1FK9ZLese-XoUuY6a2MPsuDS74",
+            authDomain: "magic-over-auth.firebaseapp.com",
+            databaseURL: "https://magic-over-auth-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "magic-over-auth",
+            storageBucket: "magic-over-auth.firebasestorage.app",
+            messagingSenderId: "413812907152",
+            appId: "1:413812907152:web:6447156f262615a7e58c15"
+        };
+
+        // Initialize Firebase
+        let firebaseApp, firebaseDb;
+        try {
+            firebaseApp = firebase.initializeApp(firebaseConfig);
+            firebaseDb = firebase.database();
+
+            // ✅ Abilita persistenza offline per browser (diverso da mobile native)
+            // Nota: Firebase Web non ha keepSynced(), la persistenza è automatica
+            console.log('✅ Firebase inizializzato (persistenza automatica su web)');
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+        }
+
+        // Auth Helper Functions
+        const AUTH_KEY = 'magic-over-auth-code';
+        const AUTH_DEVICE_ID = 'magic-over-device-id';
+
+        const getStoredAuthCode = () => localStorage.getItem(AUTH_KEY);
+        const setStoredAuthCode = (code) => localStorage.setItem(AUTH_KEY, code);
+        const getDeviceId = () => {
+            let deviceId = localStorage.getItem(AUTH_DEVICE_ID);
+            if (!deviceId) {
+                deviceId = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem(AUTH_DEVICE_ID, deviceId);
+            }
+            return deviceId;
+        };
+
+        const verifyAccessCode = async (code) => {
+            if (!firebaseDb) {
+                throw new Error('Firebase non disponibile. Verifica la connessione.');
+            }
+
+            const cleanCode = code.trim().toUpperCase();
+            const codeRef = firebaseDb.ref('codes/' + cleanCode);
+
+            try {
+                const snapshot = await codeRef.once('value');
+                const codeData = snapshot.val();
+
+                if (!codeData) {
+                    return { valid: false, error: 'Codice non valido' };
+                }
+
+                if (codeData.revoked) {
+                    return { valid: false, error: 'Codice revocato' };
+                }
+
+                const deviceId = getDeviceId();
+
+                // Se il codice non è mai stato attivato
+                if (!codeData.activatedAt) {
+                    await codeRef.update({
+                        activatedAt: new Date().toISOString(),
+                        deviceId: deviceId,
+                        deviceCount: 1
+                    });
+                    return { valid: true };
+                }
+
+                // Se è già stato attivato, verifica il deviceId
+                if (codeData.deviceId === deviceId) {
+                    return { valid: true };
+                }
+
+                // Codice già usato da altro dispositivo
+                return {
+                    valid: false,
+                    error: 'Codice già utilizzato su un altro dispositivo'
+                };
+
+            } catch (error) {
+                console.error('Errore verifica codice:', error);
+                return {
+                    valid: false,
+                    error: 'Errore di connessione. Riprova.'
+                };
+            }
+        };
+
+        // IndexedDB Helper
+        const DB_NAME = 'MagicOverDB';
+        const DB_VERSION = 3;
+
+        // Force delete old corrupted database
+        const resetDB = () => {
+            return new Promise((resolve) => {
+                const deleteReq = indexedDB.deleteDatabase(DB_NAME);
+                deleteReq.onsuccess = () => {
+                    console.log('Old database deleted');
+                    resolve();
+                };
+                deleteReq.onerror = () => {
+                    console.log('Database delete failed, continuing...');
+                    resolve();
+                };
+            });
+        };
+
+        const openDB = () => {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    const db = request.result;
+                    // Verify all required object stores exist
+                    const requiredStores = ['settings', 'slots', 'bets', 'archive'];
+                    const missingStores = requiredStores.filter(store => !db.objectStoreNames.contains(store));
+
+                    if (missingStores.length > 0) {
+                        console.error('Missing object stores:', missingStores);
+                        db.close();
+                        // Delete corrupted database and reload
+                        const deleteReq = indexedDB.deleteDatabase(DB_NAME);
+                        deleteReq.onsuccess = () => {
+                            console.log('Corrupted database deleted, reloading...');
+                            window.location.reload();
+                        };
+                        deleteReq.onerror = () => reject(new Error('Failed to delete corrupted database'));
+                    } else {
+                        resolve(db);
+                    }
+                };
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('settings')) {
+                        db.createObjectStore('settings', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('slots')) {
+                        db.createObjectStore('slots', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('bets')) {
+                        const betsStore = db.createObjectStore('bets', { keyPath: 'id', autoIncrement: true });
+                        betsStore.createIndex('slotId', 'slotId', { unique: false });
+                    }
+                    if (!db.objectStoreNames.contains('archive')) {
+                        db.createObjectStore('archive', { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+            });
+        };
+
+        const dbGet = async (store, key) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(store, 'readonly');
+                const req = tx.objectStore(store).get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        };
+
+        const dbGetAll = async (store) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(store, 'readonly');
+                const req = tx.objectStore(store).getAll();
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        };
+
+        const dbPut = async (store, data) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(store, 'readwrite');
+                const req = tx.objectStore(store).put(data);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        };
+
+        const dbDelete = async (store, key) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(store, 'readwrite');
+                const req = tx.objectStore(store).delete(key);
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        };
+
+        const dbClear = async (store) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(store, 'readwrite');
+                const req = tx.objectStore(store).clear();
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        };
+
+        // ========================================
+        // 🔥 FIREBASE REALTIME DATABASE HELPERS
+        // ========================================
+
+        // Ottieni il percorso Firebase per questo utente
+        const getUserPath = () => {
+            const deviceId = getDeviceId();
+            return `users/${deviceId}`;
+        };
+
+        // Leggi un singolo elemento da Firebase
+        const fbGet = async (store, key) => {
+            if (!firebaseDb) throw new Error('Firebase non disponibile');
+
+            const path = `${getUserPath()}/${store}/${key}`;
+            const snapshot = await firebaseDb.ref(path).once('value');
+            return snapshot.val();
+        };
+
+        // Leggi tutti gli elementi di uno store da Firebase
+        const fbGetAll = async (store) => {
+            if (!firebaseDb) throw new Error('Firebase non disponibile');
+
+            const path = `${getUserPath()}/${store}`;
+            const snapshot = await firebaseDb.ref(path).once('value');
+            const data = snapshot.val();
+
+            // Converti oggetto Firebase in array compatibile con IndexedDB
+            if (!data) return [];
+
+            return Object.keys(data).map(key => ({
+                ...data[key],
+                id: data[key].id || key  // Mantieni l'ID originale
+            }));
+        };
+
+        // Salva un elemento su Firebase
+        const fbSet = async (store, data) => {
+            if (!firebaseDb) throw new Error('Firebase non disponibile');
+
+            const key = data.id;
+            if (!key) {
+                throw new Error('I dati devono avere un campo "id"');
+            }
+
+            const path = `${getUserPath()}/${store}/${key}`;
+            await firebaseDb.ref(path).set(data);
+            return key;
+        };
+
+        // Elimina un elemento da Firebase
+        const fbDelete = async (store, key) => {
+            if (!firebaseDb) throw new Error('Firebase non disponibile');
+
+            const path = `${getUserPath()}/${store}/${key}`;
+            await firebaseDb.ref(path).remove();
+        };
+
+        // Pulisci uno store su Firebase
+        const fbClear = async (store) => {
+            if (!firebaseDb) throw new Error('Firebase non disponibile');
+
+            const path = `${getUserPath()}/${store}`;
+            await firebaseDb.ref(path).remove();
+        };
+
+        // Aggiungi un elemento con auto-increment ID (per bets/archive)
+        const fbAdd = async (store, data) => {
+            if (!firebaseDb) throw new Error('Firebase non disponibile');
+
+            const path = `${getUserPath()}/${store}`;
+            const newRef = firebaseDb.ref(path).push();
+
+            const itemWithId = {
+                ...data,
+                id: newRef.key  // Firebase genera un ID univoco
+            };
+
+            await newRef.set(itemWithId);
+            return newRef.key;
+        };
+
+        // ========================================
+        // 🔄 MIGRAZIONE DA INDEXEDDB A FIREBASE
+        // ========================================
+
+        const migrateToFirebase = async () => {
+            console.log('🔄 Inizio migrazione da IndexedDB a Firebase...');
+
+            try {
+                // Verifica se ci sono dati da migrare
+                const slots = await dbGetAll('slots');
+                const bets = await dbGetAll('bets');
+                const settings = await dbGetAll('settings');
+                const archive = await dbGetAll('archive');
+
+                if (slots.length === 0 && bets.length === 0 && settings.length === 0) {
+                    console.log('ℹ️ Nessun dato da migrare');
+                    return { migrated: false, reason: 'no_data' };
+                }
+
+                // Verifica se Firebase è già popolato
+                const existingData = await fbGetAll('slots');
+                if (existingData.length > 0) {
+                    console.log('ℹ️ Dati già presenti su Firebase, migrazione saltata');
+                    return { migrated: false, reason: 'already_migrated' };
+                }
+
+                // Migra slots
+                for (const slot of slots) {
+                    await fbSet('slots', slot);
+                }
+                console.log(`✅ Migrati ${slots.length} slots`);
+
+                // Migra bets
+                for (const bet of bets) {
+                    await fbSet('bets', bet);
+                }
+                console.log(`✅ Migrati ${bets.length} bets`);
+
+                // Migra settings
+                for (const setting of settings) {
+                    await fbSet('settings', setting);
+                }
+                console.log(`✅ Migrati ${settings.length} settings`);
+
+                // Migra archive
+                for (const item of archive) {
+                    await fbSet('archive', item);
+                }
+                console.log(`✅ Migrati ${archive.length} archivi`);
+
+                console.log('✅ Migrazione completata con successo!');
+                return {
+                    migrated: true,
+                    stats: {
+                        slots: slots.length,
+                        bets: bets.length,
+                        settings: settings.length,
+                        archive: archive.length
+                    }
+                };
+
+            } catch (error) {
+                console.error('❌ Errore durante la migrazione:', error);
+                throw error;
+            }
+        };
+
+        // Calcola media armonica
+        const harmonicMean = (values) => {
+            const valid = values.filter(v => v > 0);
+            if (valid.length === 0) return 1.65;
+            return valid.length / valid.reduce((sum, v) => sum + (1 / v), 0);
+        };
+
+        // Calcola stake suggerito (formula Excel originale)
+        const calculateStake = (slot, slotBets, newQuota = 1.8) => {
+            const stakePerc = slot.stakePerc || 0.02;       // $B$2
+            const cassaCorrente = slot.cassaCorrente || 50;  // $B$3
+            const quotaMedia = 1.65;                         // $A$4
+            
+            // Stake base minimo
+            const stakeBase = stakePerc * cassaCorrente;
+            
+            // Se non ci sono scommesse, ritorna stake base
+            if (!slotBets || slotBets.length === 0) {
+                return Math.round(stakeBase * 10) / 10;
+            }
+            
+            const lastBet = slotBets[slotBets.length - 1];
+            const stakePrecedente = lastBet.stake;           // D93
+            const esitoPrecedente = lastBet.esito;           // J93
+            const quotaPrec = lastBet.quota || quotaMedia;   // G93
+            const guadagnoPrec = lastBet.guadagno || 0;      // K93
+            
+            // Media armonica della quota nuova (singola)
+            const mediaArmonicaNuova = newQuota;
+            
+            // Media armonica di TUTTE le quote per calcolo N93
+            const tutteQuote = slotBets.map(b => b.quota).filter(q => q > 0);
+            const mediaArmonicaTutte = harmonicMean(tutteQuote);
+            
+            // O93 = percentuale guadagno attuale
+            const profitto = cassaCorrente - slot.cassaIniziale;
+            const guadagnoPercent = profitto / slot.cassaIniziale;
+            
+            // N93 = stakePerc / quotaMedia * numScommesse / 1.65 / mediaArmonicaTutte
+            const numScommesse = slotBets.length;
+            const N93 = (stakePerc / quotaMedia) * numScommesse / 1.65 / mediaArmonicaTutte;
+            
+            // Fattore: (1 - 1/quota)
+            const fattore = 1 - (1 / mediaArmonicaNuova);
+            
+            let stakeCalcolato;
+            
+            if (esitoPrecedente === 'LOSE') {
+                // Dopo LOSE: stake = stake_prec / (1 - 1/quota) / 1.65
+                stakeCalcolato = stakePrecedente / fattore / quotaMedia;
+            } else if (guadagnoPercent < N93) {
+                // Sotto soglia N93: stake = stake_prec / (1 - 1/quota) / 4.65
+                stakeCalcolato = stakePrecedente / fattore / (quotaMedia + 3);
+            } else {
+                // Sopra soglia: formula reset
+                // MEDIA(M93*$B$3, K93 * MEDIA(G93-1, $A$4-2, G93, 1))
+                const mediaInterna = ((quotaPrec - 1) + (quotaMedia - 2) + quotaPrec + 1) / 4;
+                const parte1 = cassaCorrente * stakePerc;
+                const parte2 = guadagnoPrec * mediaInterna;
+                stakeCalcolato = (parte1 + parte2) / 2;
+            }
+            
+            // MAX tra stake base e calcolato
+            const stakeFinal = Math.max(stakeBase, stakeCalcolato);
+            
+            // Arrotonda a 1 decimale
+            return Math.round(stakeFinal * 10) / 10;
+        };
+
+        // Default slot configuration
+        const createDefaultSlot = (id) => ({
+            id,
+            name: `Slot ${id}`,
+            cassaIniziale: 50,
+            cassaCorrente: 50,
+            stakePerc: 0.02,
+            recupero: 'Alto',
+            stopWin: null,
+            stopLose: null,
+        });
+
+        const SLOT_IDS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+        // Main App Component
+        // Login Screen Component
+        function LoginScreen({ onLogin }) {
+            const [code, setCode] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (!code.trim()) {
+                    setError('Inserisci un codice di accesso');
+                    return;
+                }
+
+                setLoading(true);
+                setError('');
+
+                const result = await verifyAccessCode(code);
+
+                if (result.valid) {
+                    setStoredAuthCode(code.trim().toUpperCase());
+                    onLogin();
+                } else {
+                    setError(result.error || 'Codice non valido');
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div style={{
+                    minHeight: '100vh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px',
+                    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+                }}>
+                    <div style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '20px',
+                        padding: '40px 30px',
+                        maxWidth: '400px',
+                        width: '100%',
+                        textAlign: 'center',
+                        backdropFilter: 'blur(10px)'
+                    }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '10px' }}>⚽</div>
+                        <h1 style={{ color: 'var(--green)', marginBottom: '10px', fontSize: '1.8rem' }}>
+                            Magic Over
+                        </h1>
+                        <p style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '30px' }}>
+                            Betting Progress Manager
+                        </p>
+
+                        <form onSubmit={handleSubmit}>
+                            <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+                                <label style={{
+                                    display: 'block',
+                                    marginBottom: '8px',
+                                    fontSize: '0.9rem',
+                                    opacity: 0.8
+                                }}>
+                                    Codice di Accesso
+                                </label>
+                                <input
+                                    type="text"
+                                    value={code}
+                                    onChange={(e) => setCode(e.target.value)}
+                                    placeholder="MAGIC-XXXX-XXXX"
+                                    disabled={loading}
+                                    style={{
+                                        width: '100%',
+                                        padding: '15px',
+                                        borderRadius: '10px',
+                                        border: error ? '2px solid var(--red)' : '1px solid rgba(255,255,255,0.2)',
+                                        background: 'rgba(255,255,255,0.1)',
+                                        color: '#fff',
+                                        fontSize: '1rem',
+                                        textAlign: 'center',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '1px'
+                                    }}
+                                />
+                            </div>
+
+                            {error && (
+                                <div style={{
+                                    background: 'rgba(255, 71, 87, 0.2)',
+                                    border: '1px solid var(--red)',
+                                    borderRadius: '8px',
+                                    padding: '12px',
+                                    marginBottom: '20px',
+                                    fontSize: '0.9rem',
+                                    color: 'var(--red)'
+                                }}>
+                                    ⚠️ {error}
+                                </div>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="btn btn-primary"
+                                style={{
+                                    opacity: loading ? 0.6 : 1,
+                                    cursor: loading ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                {loading ? 'Verifica in corso...' : 'Accedi'}
+                            </button>
+                        </form>
+
+                        <div style={{
+                            marginTop: '30px',
+                            fontSize: '0.8rem',
+                            opacity: 0.6,
+                            lineHeight: '1.6'
+                        }}>
+                            <p>🔒 App ad accesso limitato</p>
+                            <p style={{ marginTop: '5px' }}>
+                                Se non hai un codice, contatta l'amministratore
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [checkingAuth, setCheckingAuth] = useState(true);
+            const [currentView, setCurrentView] = useState('dashboard');
+            const [activeSlot, setActiveSlot] = useState('A');
+            const [slots, setSlots] = useState({});
+            const [bets, setBets] = useState([]);
+            const [settings, setSettings] = useState({ bankrollTotale: 400 });
+            const [showAddBet, setShowAddBet] = useState(false);
+            const [showSettings, setShowSettings] = useState(false);
+            const [toast, setToast] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            // Check authentication on mount
+            useEffect(() => {
+                const checkAuth = async () => {
+                    const storedCode = getStoredAuthCode();
+
+                    if (storedCode) {
+                        // Verifica il codice salvato
+                        const result = await verifyAccessCode(storedCode);
+                        if (result.valid) {
+                            setIsAuthenticated(true);
+                        } else {
+                            // Codice non più valido, richiedi login
+                            localStorage.removeItem(AUTH_KEY);
+                            setIsAuthenticated(false);
+                        }
+                    }
+
+                    setCheckingAuth(false);
+                };
+
+                checkAuth();
+            }, []);
+
+            // Load data from Firebase (with automatic migration from IndexedDB)
+            useEffect(() => {
+                if (!isAuthenticated) return;
+
+                const loadData = async () => {
+                    try {
+                        // 🔄 Migra automaticamente dati da IndexedDB a Firebase (al primo accesso)
+                        await openDB();  // Assicura che IndexedDB sia inizializzato
+                        const migrationResult = await migrateToFirebase();
+
+                        if (migrationResult.migrated) {
+                            showToast(`✅ ${migrationResult.stats.slots} slots e ${migrationResult.stats.bets} scommesse migrati su Firebase!`);
+                        }
+
+                        // Load settings
+                        try {
+                            const savedSettings = await fbGet('settings', 'main');
+                            if (savedSettings) setSettings(savedSettings.data);
+                        } catch (err) {
+                            console.log('No settings found, using defaults');
+                        }
+
+                        // Load slots
+                        let slotsLoaded = false;
+                        try {
+                            const savedSlots = await fbGetAll('slots');
+                            if (savedSlots && savedSlots.length > 0) {
+                                const slotsObj = {};
+                                savedSlots.forEach(s => slotsObj[s.id] = s);
+                                setSlots(slotsObj);
+                                slotsLoaded = true;
+                            }
+                        } catch (err) {
+                            console.log('Error loading slots:', err);
+                        }
+
+                        if (!slotsLoaded) {
+                            // Initialize default slots
+                            console.log('Creating default slots...');
+                            const defaultSlots = {};
+                            for (const id of SLOT_IDS) {
+                                const slot = createDefaultSlot(id);
+                                defaultSlots[id] = slot;
+                                try {
+                                    await fbSet('slots', slot);
+                                } catch (err) {
+                                    console.error('Error saving slot:', id, err);
+                                }
+                            }
+                            setSlots(defaultSlots);
+                        }
+
+                        // Load bets
+                        try {
+                            const savedBets = await fbGetAll('bets');
+                            setBets(savedBets || []);
+                        } catch (err) {
+                            console.log('Error loading bets:', err);
+                            setBets([]);
+                        }
+                    } catch (err) {
+                        console.error('Error loading data:', err);
+                        // Initialize with defaults even on error
+                        const defaultSlots = {};
+                        for (const id of SLOT_IDS) {
+                            defaultSlots[id] = createDefaultSlot(id);
+                        }
+                        setSlots(defaultSlots);
+                    }
+                    setLoading(false);
+                };
+                loadData();
+            }, [isAuthenticated]);
+
+            const showToast = (message) => {
+                setToast(message);
+                setTimeout(() => setToast(null), 2000);
+            };
+
+            const saveSettings = async (newSettings) => {
+                setSettings(newSettings);
+                await fbSet('settings', { id: 'main', data: newSettings });
+                showToast('Impostazioni salvate');
+            };
+
+            const saveSlot = async (slot) => {
+                setSlots(prev => ({ ...prev, [slot.id]: slot }));
+                await fbSet('slots', slot);
+            };
+
+            const addBet = async (bet) => {
+                const slot = slots[bet.slotId];
+                const betsForSlot = bets.filter(b => b.slotId === bet.slotId);
+
+                const preCassa = slot.cassaCorrente;
+                let stake = bet.stake;
+
+                // Calculate stake based on recovery mode
+                if (slot.recupero === 'Alto' && betsForSlot.length > 0) {
+                    const lastBet = betsForSlot[betsForSlot.length - 1];
+                    if (lastBet.esito === 'LOSE') {
+                        stake = Math.min(lastBet.stake * 1.6, preCassa * 0.3);
+                    }
+                }
+
+                const newBet = {
+                    ...bet,
+                    step: betsForSlot.length + 1,
+                    data: new Date().toISOString(),
+                    preCassa,
+                    stake: parseFloat(stake.toFixed(2)),
+                };
+
+                // Calculate result ONLY if esito is provided
+                let vincita = 0;
+                let guadagno = 0;
+                let postCassa = preCassa;
+
+                if (bet.esito) {
+                    switch (bet.esito) {
+                        case 'WIN':
+                            vincita = stake * bet.quota;
+                            guadagno = vincita - stake;
+                            break;
+                        case 'LOSE':
+                            vincita = 0;
+                            guadagno = -stake;
+                            break;
+                        case '1/2 WIN':
+                            vincita = stake + (stake * (bet.quota - 1) / 2);
+                            guadagno = vincita - stake;
+                            break;
+                        case 'NULLA':
+                            vincita = stake;
+                            guadagno = 0;
+                            break;
+                    }
+                    postCassa = preCassa + guadagno;
+                }
+
+                newBet.vincita = parseFloat(vincita.toFixed(2));
+                newBet.guadagno = parseFloat(guadagno.toFixed(2));
+                newBet.postCassa = parseFloat(postCassa.toFixed(2));
+
+                // Save bet to Firebase
+                const betId = await fbAdd('bets', newBet);
+                newBet.id = betId;
+                setBets(prev => [...prev, newBet]);
+
+                // Update slot ONLY if esito is provided
+                if (bet.esito) {
+                    const updatedSlot = {
+                        ...slot,
+                        cassaCorrente: newBet.postCassa
+                    };
+                    await saveSlot(updatedSlot);
+                }
+                showToast(bet.esito ? 'Scommessa aggiunta' : 'Scommessa in attesa');
+
+                setShowAddBet(false);
+            };
+
+            const updateBetResult = async (betId, esito) => {
+                const bet = bets.find(b => b.id === betId);
+                if (!bet) return;
+
+                const slot = slots[bet.slotId];
+                const stake = bet.stake;
+                let vincita = 0;
+                let guadagno = 0;
+
+                switch (esito) {
+                    case 'WIN':
+                        vincita = stake * bet.quota;
+                        guadagno = vincita - stake;
+                        break;
+                    case 'LOSE':
+                        vincita = 0;
+                        guadagno = -stake;
+                        break;
+                    case '1/2 WIN':
+                        vincita = stake + (stake * (bet.quota - 1) / 2);
+                        guadagno = vincita - stake;
+                        break;
+                    case 'NULLA':
+                        vincita = stake;
+                        guadagno = 0;
+                        break;
+                }
+
+                const updatedBet = {
+                    ...bet,
+                    esito,
+                    vincita: parseFloat(vincita.toFixed(2)),
+                    guadagno: parseFloat(guadagno.toFixed(2)),
+                    postCassa: parseFloat((bet.preCassa + guadagno).toFixed(2))
+                };
+
+                // Update bet in database
+                await fbSet('bets', updatedBet);
+                setBets(prev => prev.map(b => b.id === betId ? updatedBet : b));
+
+                // Update slot cassa
+                const updatedSlot = {
+                    ...slot,
+                    cassaCorrente: updatedBet.postCassa
+                };
+                await saveSlot(updatedSlot);
+                showToast('Esito aggiornato');
+            };
+
+            const deleteBet = async (betId) => {
+                await fbDelete('bets', betId);
+                setBets(prev => prev.filter(b => b.id !== betId));
+                showToast('Scommessa eliminata');
+            };
+
+            const resetSlot = async (slotId) => {
+                const slot = slots[slotId];
+                const updatedSlot = {
+                    ...slot,
+                    cassaCorrente: slot.cassaIniziale
+                };
+                await saveSlot(updatedSlot);
+                
+                // Delete all bets for this slot
+                const slotBets = bets.filter(b => b.slotId === slotId);
+                for (const bet of slotBets) {
+                    await fbDelete('bets', bet.id);
+                }
+                setBets(prev => prev.filter(b => b.slotId !== slotId));
+                showToast(`Slot ${slotId} resettato`);
+            };
+
+            const getSlotStats = (slotId) => {
+                const slot = slots[slotId];
+                if (!slot) return {};
+                
+                const slotBets = bets.filter(b => b.slotId === slotId);
+                const wins = slotBets.filter(b => b.esito === 'WIN' || b.esito === '1/2 WIN').length;
+                const total = slotBets.filter(b => b.esito !== 'NULLA').length;
+                const puntato = slotBets.reduce((sum, b) => sum + b.stake, 0);
+                const profitto = slot.cassaCorrente - slot.cassaIniziale;
+                const performance = slot.cassaIniziale > 0 ? profitto / slot.cassaIniziale : 0;
+                
+                let status = 'OK';
+                if (performance < -0.2) status = 'CRITICO';
+                else if (performance < -0.1) status = 'ATTENZIONE';
+
+                return {
+                    bets: slotBets.length,
+                    precisione: total > 0 ? (wins / total) : 0,
+                    puntato,
+                    profitto,
+                    performance,
+                    roi: puntato > 0 ? profitto / puntato : 0,
+                    status,
+                    media: slotBets.length > 0 ? slotBets.reduce((sum, b) => sum + b.quota, 0) / slotBets.length : 0
+                };
+            };
+
+            const getDashboardStats = () => {
+                let bankrollCorrente = 0;
+                let profittoTotale = 0;
+                let slotsAttenzione = 0;
+                let slotsCritici = 0;
+
+                SLOT_IDS.forEach(id => {
+                    const slot = slots[id];
+                    if (slot) {
+                        bankrollCorrente += slot.cassaCorrente;
+                        profittoTotale += slot.cassaCorrente - slot.cassaIniziale;
+                        const stats = getSlotStats(id);
+                        if (stats.status === 'CRITICO') slotsCritici++;
+                        else if (stats.status === 'ATTENZIONE') slotsAttenzione++;
+                    }
+                });
+
+                return { bankrollCorrente, profittoTotale, slotsAttenzione, slotsCritici };
+            };
+
+            const handleBalanceSlots = async (balancePreview) => {
+                try {
+                    const updatedSlots = { ...slots };
+                    const newBets = [];
+
+                    for (const slotId of Object.keys(balancePreview)) {
+                        const preview = balancePreview[slotId];
+                        const differenza = preview.differenza;
+
+                        // Aggiorna slot
+                        updatedSlots[slotId] = {
+                            ...updatedSlots[slotId],
+                            cassaCorrente: parseFloat(preview.cassaDopo.toFixed(2))
+                        };
+                        await fbSet('slots', updatedSlots[slotId]);
+
+                        // Se c'è stata una modifica, aggiungi bet virtuale per resettare la progressione
+                        if (Math.abs(differenza) > 0.01) {
+                            const slotBets = bets.filter(b => b.slotId === slotId);
+                            const nextStep = slotBets.length + 1;
+
+                            // Crea bet virtuale "BILANCIAMENTO"
+                            const virtualBet = {
+                                slotId: slotId,
+                                evento: '⚖️ Bilanciamento Slots',
+                                quota: 1,
+                                stake: 0,
+                                esito: 'NULLA', // Esito NULLA = non influenza statistiche
+                                step: nextStep,
+                                data: new Date().toISOString(),
+                                preCassa: preview.cassaPrima,
+                                vincita: differenza > 0 ? differenza : 0,
+                                guadagno: differenza,
+                                postCassa: preview.cassaDopo
+                            };
+
+                            // Salva bet virtuale su Firebase
+                            const betId = await fbAdd('bets', virtualBet);
+                            virtualBet.id = betId;
+                            newBets.push(virtualBet);
+                        }
+                    }
+
+                    // Aggiorna state
+                    setSlots(updatedSlots);
+                    if (newBets.length > 0) {
+                        setBets(prev => [...prev, ...newBets]);
+                    }
+                    showToast('Bilanciamento completato');
+                } catch (error) {
+                    console.error('Errore durante il bilanciamento:', error);
+                    showToast('Errore durante il bilanciamento');
+                }
+            };
+
+            // Show loading while checking auth
+            if (checkingAuth) {
+                return (
+                    <div className="app" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                        <div>Caricamento...</div>
+                    </div>
+                );
+            }
+
+            // Show login if not authenticated
+            if (!isAuthenticated) {
+                return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
+            }
+
+            // Show loading while loading data
+            if (loading) {
+                return (
+                    <div className="app" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                        <div>Caricamento dati...</div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="app">
+                    <header className="header">
+                        <h1>⚽ Magic Over</h1>
+                        <div className="subtitle">Betting Progress Manager</div>
+                    </header>
+
+                    {currentView === 'dashboard' && (
+                        <Dashboard
+                            slots={slots}
+                            bets={bets}
+                            getSlotStats={getSlotStats}
+                            getDashboardStats={getDashboardStats}
+                            onSlotClick={(id) => { setActiveSlot(id); setCurrentView('slot'); }}
+                            onBalanceSlots={handleBalanceSlots}
+                        />
+                    )}
+
+                    {currentView === 'slot' && (
+                        <SlotView
+                            slot={slots[activeSlot]}
+                            stats={getSlotStats(activeSlot)}
+                            bets={bets.filter(b => b.slotId === activeSlot)}
+                            onAddBet={() => setShowAddBet(true)}
+                            onUpdateBetResult={updateBetResult}
+                            onDeleteBet={deleteBet}
+                            onReset={() => resetSlot(activeSlot)}
+                            onBack={() => setCurrentView('dashboard')}
+                            activeSlot={activeSlot}
+                            setActiveSlot={setActiveSlot}
+                            slots={slots}
+                            getSlotStats={getSlotStats}
+                        />
+                    )}
+
+                    {currentView === 'stats' && (
+                        <StatsView 
+                            slots={slots}
+                            bets={bets}
+                            getSlotStats={getSlotStats}
+                        />
+                    )}
+
+                    {currentView === 'settings' && (
+                        <SettingsView
+                            settings={settings}
+                            slots={slots}
+                            onSaveSettings={saveSettings}
+                            onSaveSlot={saveSlot}
+                        />
+                    )}
+
+                    {showAddBet && (
+                        <AddBetModal
+                            slotId={activeSlot}
+                            slot={slots[activeSlot]}
+                            slotBets={bets.filter(b => b.slotId === activeSlot)}
+                            onAdd={addBet}
+                            onClose={() => setShowAddBet(false)}
+                        />
+                    )}
+
+                    <nav className="bottom-nav">
+                        <div className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentView('dashboard')}>
+                            <span className="nav-icon">📊</span>
+                            Dashboard
+                        </div>
+                        <div className={`nav-item ${currentView === 'slot' ? 'active' : ''}`} onClick={() => setCurrentView('slot')}>
+                            <span className="nav-icon">🎰</span>
+                            Slots
+                        </div>
+                        <div className={`nav-item ${currentView === 'stats' ? 'active' : ''}`} onClick={() => setCurrentView('stats')}>
+                            <span className="nav-icon">📈</span>
+                            Stats
+                        </div>
+                        <div className={`nav-item ${currentView === 'settings' ? 'active' : ''}`} onClick={() => setCurrentView('settings')}>
+                            <span className="nav-icon">⚙️</span>
+                            Settings
+                        </div>
+                    </nav>
+
+                    {toast && <div className="toast">{toast}</div>}
+                </div>
+            );
+        }
+
+        // Dashboard Component
+        function Dashboard({ slots, bets, getSlotStats, getDashboardStats, onSlotClick, onBalanceSlots }) {
+            const stats = getDashboardStats();
+            const [showBalanceModal, setShowBalanceModal] = useState(false);
+            const [balanceMode, setBalanceMode] = useState('profitti'); // 'profitti' o 'media'
+            const [balancePreview, setBalancePreview] = useState(null);
+
+            const calculateBalancePreview = (mode) => {
+                const slotIds = Object.keys(slots);
+                const preview = {};
+
+                if (mode === 'media') {
+                    // Modalità Media: tutti gli slot alla media delle casse correnti
+                    const totalCassa = slotIds.reduce((sum, id) => sum + slots[id].cassaCorrente, 0);
+                    const mediaCassa = totalCassa / slotIds.length;
+
+                    slotIds.forEach(id => {
+                        const slot = slots[id];
+                        preview[id] = {
+                            cassaPrima: slot.cassaCorrente,
+                            cassaDopo: mediaCassa,
+                            differenza: mediaCassa - slot.cassaCorrente,
+                            cassaIniziale: slot.cassaIniziale
+                        };
+                    });
+                } else {
+                    // Modalità Profitti: redistribuisce proporzionalmente
+                    const slotsInProfitto = slotIds.filter(id => slots[id].cassaCorrente > slots[id].cassaIniziale);
+                    const slotsInPerdita = slotIds.filter(id => slots[id].cassaCorrente < slots[id].cassaIniziale);
+
+                    // Calcola profitti totali e perdite totali
+                    const profittiTotali = slotsInProfitto.reduce((sum, id) =>
+                        sum + (slots[id].cassaCorrente - slots[id].cassaIniziale), 0);
+                    const perditeTotali = Math.abs(slotsInPerdita.reduce((sum, id) =>
+                        sum + (slots[id].cassaCorrente - slots[id].cassaIniziale), 0));
+
+                    // Calcola percentuale di perdita per ogni slot
+                    const perditaPerc = {};
+                    let totalePerditePerc = 0;
+                    slotsInPerdita.forEach(id => {
+                        const perdita = Math.abs(slots[id].cassaCorrente - slots[id].cassaIniziale);
+                        perditaPerc[id] = perdita;
+                        totalePerditePerc += perdita;
+                    });
+
+                    // Determina quanto redistribuire (minimo tra profitti e perdite)
+                    const daRedistribuire = Math.min(profittiTotali, perditeTotali);
+
+                    // Inizializza preview con valori attuali
+                    slotIds.forEach(id => {
+                        preview[id] = {
+                            cassaPrima: slots[id].cassaCorrente,
+                            cassaDopo: slots[id].cassaCorrente,
+                            differenza: 0,
+                            cassaIniziale: slots[id].cassaIniziale
+                        };
+                    });
+
+                    // Redistribuisci proporzionalmente
+                    if (daRedistribuire > 0 && totalePerditePerc > 0) {
+                        // Togli dai profitti proporzionalmente
+                        slotsInProfitto.forEach(id => {
+                            const profitto = slots[id].cassaCorrente - slots[id].cassaIniziale;
+                            const percProfitto = profitto / profittiTotali;
+                            const daRimuovere = daRedistribuire * percProfitto;
+
+                            preview[id].cassaDopo = slots[id].cassaCorrente - daRimuovere;
+                            preview[id].differenza = -daRimuovere;
+                        });
+
+                        // Aggiungi alle perdite proporzionalmente
+                        slotsInPerdita.forEach(id => {
+                            const percPerdita = perditaPerc[id] / totalePerditePerc;
+                            const daAggiungere = daRedistribuire * percPerdita;
+
+                            preview[id].cassaDopo = slots[id].cassaCorrente + daAggiungere;
+                            preview[id].differenza = daAggiungere;
+                        });
+                    }
+                }
+
+                return preview;
+            };
+
+            const handleOpenBalanceModal = () => {
+                const preview = calculateBalancePreview(balanceMode);
+                setBalancePreview(preview);
+                setShowBalanceModal(true);
+            };
+
+            const handleChangeModeAndRecalculate = (newMode) => {
+                setBalanceMode(newMode);
+                const preview = calculateBalancePreview(newMode);
+                setBalancePreview(preview);
+            };
+
+            const handleConfirmBalance = () => {
+                if (balancePreview) {
+                    onBalanceSlots(balancePreview);
+                    setShowBalanceModal(false);
+                    setBalancePreview(null);
+                }
+            };
+
+            return (
+                <div className="content">
+                    <div className="grid">
+                        <div className="card">
+                            <div className="card-title">Bankroll Totale</div>
+                            <div className={`card-value ${stats.profittoTotale >= 0 ? 'positive' : 'negative'}`}>
+                                €{stats.bankrollCorrente.toFixed(2)}
+                            </div>
+                        </div>
+                        <div className="card">
+                            <div className="card-title">Profitto</div>
+                            <div className={`card-value ${stats.profittoTotale >= 0 ? 'positive' : 'negative'}`}>
+                                {stats.profittoTotale >= 0 ? '+' : ''}€{stats.profittoTotale.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="grid grid-3">
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '2rem', color: 'var(--green)' }}>{8 - stats.slotsAttenzione - stats.slotsCritici}</div>
+                                <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>OK</div>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '2rem', color: 'var(--yellow)' }}>{stats.slotsAttenzione}</div>
+                                <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Attenzione</div>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '2rem', color: 'var(--red)' }}>{stats.slotsCritici}</div>
+                                <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Critici</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style={{ marginBottom: 15, opacity: 0.8 }}>Stato Slots</h3>
+                    {SLOT_IDS.map(id => {
+                        const slot = slots[id];
+                        const slotStats = getSlotStats(id);
+                        const betStatus = getLastBetStatus(id, bets);
+                        if (!slot) return null;
+
+                        return (
+                            <div
+                                key={id}
+                                className={`slot-card ${slotStats.status.toLowerCase()}`}
+                                onClick={() => onSlotClick(id)}
+                                style={{ marginBottom: 10, cursor: 'pointer' }}
+                            >
+                                <div>
+                                    <div className="slot-name">
+                                        Slot {id}
+                                        {betStatus && (
+                                            <span className={`bet-badge ${betStatus.status}`} style={{ marginLeft: 8 }}>
+                                                {betStatus.label}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="slot-perf">
+                                        €{slot.cassaCorrente.toFixed(2)}
+                                        <span style={{
+                                            marginLeft: 10,
+                                            color: slotStats.performance >= 0 ? 'var(--green)' : 'var(--red)'
+                                        }}>
+                                            {(slotStats.performance * 100).toFixed(1)}%
+                                        </span>
+                                    </div>
+                                </div>
+                                <span className={`badge ${slotStats.status.toLowerCase()}`}>{slotStats.status}</span>
+                            </div>
+                        );
+                    })}
+
+                    <button
+                        className="btn btn-accent"
+                        onClick={handleOpenBalanceModal}
+                        style={{ marginTop: 20, width: '100%' }}
+                    >
+                        ⚖️ Bilancia Slots
+                    </button>
+
+                    {showBalanceModal && balancePreview && (
+                        <div className="modal-overlay" onClick={() => setShowBalanceModal(false)}>
+                            <div className="modal" onClick={e => e.stopPropagation()}>
+                                <h2>⚖️ Bilanciamento Slots</h2>
+
+                                <div style={{ marginBottom: 20 }}>
+                                    <label style={{ display: 'block', marginBottom: 10, fontSize: '0.9rem', opacity: 0.8 }}>
+                                        Modalità di Bilanciamento
+                                    </label>
+                                    <select
+                                        className="input"
+                                        value={balanceMode}
+                                        onChange={e => handleChangeModeAndRecalculate(e.target.value)}
+                                    >
+                                        <option value="profitti">Redistribuzione Profitti (proporzionale)</option>
+                                        <option value="media">Bilanciamento Completo (media)</option>
+                                    </select>
+                                    <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: 5 }}>
+                                        {balanceMode === 'profitti'
+                                            ? 'Redistribuisce i profitti dagli slot vincenti agli slot in perdita, proporzionalmente alla perdita di ciascuno.'
+                                            : 'Porta tutti gli slot allo stesso valore (media delle casse correnti).'}
+                                    </div>
+                                </div>
+
+                                <h3 style={{ marginBottom: 10, fontSize: '1rem' }}>Anteprima Modifiche:</h3>
+                                <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: 20 }}>
+                                    {SLOT_IDS.map(id => {
+                                        const preview = balancePreview[id];
+                                        if (!preview) return null;
+                                        const isDifferent = Math.abs(preview.differenza) > 0.01;
+
+                                        return (
+                                            <div
+                                                key={id}
+                                                className="card"
+                                                style={{
+                                                    marginBottom: 10,
+                                                    background: isDifferent
+                                                        ? (preview.differenza > 0
+                                                            ? 'rgba(0, 210, 106, 0.1)'
+                                                            : 'rgba(255, 71, 87, 0.1)')
+                                                        : 'rgba(255,255,255,0.05)'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 'bold' }}>Slot {id}</div>
+                                                        <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>
+                                                            €{preview.cassaPrima.toFixed(2)}
+                                                            <span style={{ margin: '0 8px' }}>→</span>
+                                                            <span style={{
+                                                                color: preview.differenza > 0 ? 'var(--green)' :
+                                                                       preview.differenza < 0 ? 'var(--red)' : 'inherit'
+                                                            }}>
+                                                                €{preview.cassaDopo.toFixed(2)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    {isDifferent && (
+                                                        <div style={{
+                                                            fontSize: '1rem',
+                                                            fontWeight: 'bold',
+                                                            color: preview.differenza > 0 ? 'var(--green)' : 'var(--red)'
+                                                        }}>
+                                                            {preview.differenza > 0 ? '+' : ''}€{preview.differenza.toFixed(2)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="card" style={{ background: 'rgba(0, 210, 106, 0.1)', marginBottom: 15 }}>
+                                    <div style={{ fontSize: '0.85rem' }}>
+                                        <strong>Bankroll Totale:</strong> Rimane invariato a €{stats.bankrollCorrente.toFixed(2)}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', opacity: 0.7, marginTop: 5 }}>
+                                        Le casse iniziali NON vengono modificate
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: 10 }}>
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={() => setShowBalanceModal(false)}
+                                        style={{ flex: 1 }}
+                                    >
+                                        Annulla
+                                    </button>
+                                    <button
+                                        className="btn btn-primary"
+                                        onClick={handleConfirmBalance}
+                                        style={{ flex: 1 }}
+                                    >
+                                        Conferma Bilanciamento
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Helper: Ottieni stato ultima scommessa
+        const getLastBetStatus = (slotId, allBets) => {
+            const slotBets = allBets.filter(b => b.slotId === slotId && b.evento !== '⚖️ Bilanciamento Slots');
+            if (slotBets.length === 0) return null;
+
+            const lastBet = slotBets[slotBets.length - 1];
+
+            // Se esito non ancora inserito
+            if (!lastBet.esito) {
+                return {
+                    status: 'in-corso',
+                    label: '⏳',
+                    text: 'In corso'
+                };
+            }
+
+            // Mappatura esiti
+            const statusMap = {
+                'WIN': { status: 'win', label: '✓', text: 'Vinta' },
+                'LOSE': { status: 'lose', label: '✗', text: 'Persa' },
+                '1/2 WIN': { status: 'half-win', label: '½', text: '½ Win' },
+                'NULLA': { status: 'nulla', label: '○', text: 'Nulla' }
+            };
+
+            return statusMap[lastBet.esito] || null;
+        };
+
+        // Slot View Component
+        function SlotView({ slot, stats, bets, onAddBet, onUpdateBetResult, onDeleteBet, onReset, onBack, activeSlot, setActiveSlot, slots, getSlotStats }) {
+            const [showConfirmReset, setShowConfirmReset] = useState(false);
+            const [editingBetId, setEditingBetId] = useState(null);
+
+            if (!slot) return null;
+
+            return (
+                <div>
+                    <div className="tabs">
+                        {SLOT_IDS.map(id => {
+                            const st = getSlotStats(id);
+                            const betStatus = getLastBetStatus(id, bets);
+                            return (
+                                <button
+                                    key={id}
+                                    className={`tab ${activeSlot === id ? 'active' : ''} ${st.status === 'CRITICO' ? 'critical' : ''} ${st.status === 'ATTENZIONE' ? 'attention' : ''}`}
+                                    onClick={() => setActiveSlot(id)}
+                                >
+                                    {id}
+                                    {betStatus && (
+                                        <span className={`bet-badge ${betStatus.status}`}>
+                                            {betStatus.label}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="content">
+                        <div className="card">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                                <div>
+                                    <div className="card-title">Cassa Corrente</div>
+                                    <div className={`card-value ${stats.profitto >= 0 ? 'positive' : 'negative'}`}>
+                                        €{slot.cassaCorrente.toFixed(2)}
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <span className={`badge ${stats.status.toLowerCase()}`}>{stats.status}</span>
+                                    {(() => {
+                                        const betStatus = getLastBetStatus(slot.id, bets);
+                                        return betStatus ? (
+                                            <span className={`bet-badge ${betStatus.status}`} title={betStatus.text}>
+                                                {betStatus.label} {betStatus.text}
+                                            </span>
+                                        ) : null;
+                                    })()}
+                                </div>
+                            </div>
+                            
+                            <div className="progress-bar">
+                                <div 
+                                    className="progress-fill" 
+                                    style={{ 
+                                        width: `${Math.min(100, Math.max(0, (slot.cassaCorrente / slot.cassaIniziale) * 100))}%`,
+                                        background: stats.profitto >= 0 ? 'var(--green)' : 'var(--red)'
+                                    }} 
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid">
+                            <div className="card">
+                                <div className="card-title">Cassa Iniziale</div>
+                                <div style={{ fontSize: '1.3rem' }}>€{slot.cassaIniziale}</div>
+                            </div>
+                            <div className="card">
+                                <div className="card-title">Profitto</div>
+                                <div style={{ fontSize: '1.3rem', color: stats.profitto >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                                    {stats.profitto >= 0 ? '+' : ''}€{stats.profitto.toFixed(2)}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="card">
+                            <div className="stats-row">
+                                <span>Scommesse</span>
+                                <strong>{stats.bets}</strong>
+                            </div>
+                            <div className="stats-row">
+                                <span>Precisione</span>
+                                <strong>{(stats.precisione * 100).toFixed(1)}%</strong>
+                            </div>
+                            <div className="stats-row">
+                                <span>Puntato</span>
+                                <strong>€{stats.puntato.toFixed(2)}</strong>
+                            </div>
+                            <div className="stats-row">
+                                <span>ROI</span>
+                                <strong style={{ color: stats.roi >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                                    {(stats.roi * 100).toFixed(2)}%
+                                </strong>
+                            </div>
+                            <div className="stats-row">
+                                <span>Quota Media</span>
+                                <strong>{stats.media.toFixed(2)}</strong>
+                            </div>
+                            <div className="stats-row" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 10, marginTop: 10 }}>
+                                <span>Stake Suggerito</span>
+                                <strong style={{ color: 'var(--accent)' }}>€{calculateStake(slot, bets, 1.65).toFixed(2)}</strong>
+                            </div>
+                        </div>
+
+                        <button className="btn btn-primary" onClick={onAddBet} style={{ marginBottom: 15 }}>
+                            + Aggiungi Scommessa
+                        </button>
+
+                        <h3 style={{ marginBottom: 15, opacity: 0.8 }}>Storico Scommesse</h3>
+                        
+                        {bets.length === 0 ? (
+                            <div className="empty-state">
+                                <div style={{ fontSize: '3rem', marginBottom: 10 }}>📋</div>
+                                <div>Nessuna scommessa registrata</div>
+                            </div>
+                        ) : (
+                            [...bets].reverse().map(bet => (
+                                <div key={bet.id} className="bet-card">
+                                    <div className="bet-header">
+                                        <span className="bet-step">Step {bet.step}</span>
+                                        <span className="bet-date">{new Date(bet.data).toLocaleDateString('it-IT')}</span>
+                                    </div>
+                                    <div className="bet-event">{bet.evento || 'Evento non specificato'}</div>
+                                    <div className="bet-details">
+                                        <span className="bet-tag">Stake: €{bet.stake}</span>
+                                        <span className="bet-tag">Quota: {bet.quota}</span>
+                                        {bet.esito ? (
+                                            <>
+                                                <span className={`bet-result ${bet.esito.toLowerCase().replace(' ', '').replace('/', '')}`}>
+                                                    {bet.esito}
+                                                </span>
+                                                <span style={{ color: bet.guadagno >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                                                    {bet.guadagno >= 0 ? '+' : ''}€{bet.guadagno.toFixed(2)}
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <span className="bet-result" style={{ background: 'var(--blue)' }}>
+                                                IN ATTESA
+                                            </span>
+                                        )}
+                                    </div>
+                                    {!bet.esito && editingBetId !== bet.id && (
+                                        <button
+                                            onClick={() => setEditingBetId(bet.id)}
+                                            style={{
+                                                marginTop: 10,
+                                                padding: '8px 15px',
+                                                background: 'var(--green)',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                color: '#000',
+                                                cursor: 'pointer',
+                                                fontSize: '0.9rem',
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            ✓ Aggiungi Esito
+                                        </button>
+                                    )}
+                                    {editingBetId === bet.id && (
+                                        <div style={{ marginTop: 10, display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                            <button onClick={() => { onUpdateBetResult(bet.id, 'WIN'); setEditingBetId(null); }} className="btn btn-primary" style={{ flex: 1, padding: '8px', fontSize: '0.85rem' }}>WIN</button>
+                                            <button onClick={() => { onUpdateBetResult(bet.id, 'LOSE'); setEditingBetId(null); }} className="btn btn-danger" style={{ flex: 1, padding: '8px', fontSize: '0.85rem' }}>LOSE</button>
+                                            <button onClick={() => { onUpdateBetResult(bet.id, '1/2 WIN'); setEditingBetId(null); }} className="btn btn-secondary" style={{ flex: 1, padding: '8px', fontSize: '0.85rem' }}>1/2 WIN</button>
+                                            <button onClick={() => { onUpdateBetResult(bet.id, 'NULLA'); setEditingBetId(null); }} className="btn btn-secondary" style={{ flex: 1, padding: '8px', fontSize: '0.85rem' }}>NULLA</button>
+                                            <button onClick={() => setEditingBetId(null)} className="btn btn-secondary" style={{ width: '100%', padding: '8px', fontSize: '0.85rem', marginTop: '5px' }}>Annulla</button>
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={() => onDeleteBet(bet.id)}
+                                        style={{
+                                            marginTop: 10,
+                                            background: 'none',
+                                            border: 'none',
+                                            color: 'var(--red)',
+                                            cursor: 'pointer',
+                                            fontSize: '0.8rem'
+                                        }}
+                                    >
+                                        🗑️ Elimina
+                                    </button>
+                                </div>
+                            ))
+                        )}
+
+                        <button 
+                            className="btn btn-danger" 
+                            onClick={() => setShowConfirmReset(true)}
+                            style={{ marginTop: 20 }}
+                        >
+                            Reset Slot
+                        </button>
+
+                        {showConfirmReset && (
+                            <div className="modal-overlay" onClick={() => setShowConfirmReset(false)}>
+                                <div className="modal" onClick={e => e.stopPropagation()}>
+                                    <div className="modal-title">⚠️ Conferma Reset</div>
+                                    <p style={{ marginBottom: 20, textAlign: 'center' }}>
+                                        Sei sicuro di voler resettare lo Slot {activeSlot}? 
+                                        Tutte le scommesse verranno eliminate.
+                                    </p>
+                                    <button className="btn btn-danger" onClick={() => { onReset(); setShowConfirmReset(false); }} style={{ marginBottom: 10 }}>
+                                        Conferma Reset
+                                    </button>
+                                    <button className="btn btn-secondary" onClick={() => setShowConfirmReset(false)}>
+                                        Annulla
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // Add Bet Modal
+        function AddBetModal({ slotId, slot, slotBets, onAdd, onClose }) {
+            const [evento, setEvento] = useState('');
+            const [quota, setQuota] = useState('1.60');
+            
+            // Calcola stake iniziale usando la formula corretta
+            const calcStake = (q) => calculateStake(slot, slotBets, parseFloat(q) || 1.65);
+            const [stake, setStake] = useState(calcStake('1.60').toFixed(2));
+            const [esito, setEsito] = useState('');
+            
+            // Aggiorna stake quando cambia la quota
+            const handleQuotaChange = (newQuota) => {
+                setQuota(newQuota);
+                const nuovoStake = calcStake(newQuota);
+                setStake(nuovoStake.toFixed(2));
+            };
+
+            const handleSubmit = () => {
+                if (!evento.trim()) {
+                    alert('Inserisci un evento');
+                    return;
+                }
+                onAdd({
+                    slotId,
+                    evento,
+                    quota: parseFloat(quota),
+                    stake: parseFloat(stake),
+                    esito: esito || null  // Esito opzionale
+                });
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-title">Nuova Scommessa - Slot {slotId}</div>
+                        
+                        <div className="input-group">
+                            <label>Evento</label>
+                            <input 
+                                type="text" 
+                                value={evento} 
+                                onChange={e => setEvento(e.target.value)}
+                                placeholder="Es: Milan v Inter Over 2.5"
+                            />
+                        </div>
+
+                        <div className="input-group">
+                            <label>Quota</label>
+                            <input 
+                                type="number" 
+                                step="0.01"
+                                value={quota} 
+                                onChange={e => handleQuotaChange(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="input-group">
+                            <label>Stake suggerito (€)</label>
+                            <input 
+                                type="number" 
+                                step="0.1"
+                                value={stake} 
+                                onChange={e => setStake(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="input-group">
+                            <label>Esito (opzionale - puoi aggiungerlo dopo)</label>
+                            <select value={esito} onChange={e => setEsito(e.target.value)}>
+                                <option value="">-- Aggiungi dopo --</option>
+                                <option value="WIN">WIN</option>
+                                <option value="LOSE">LOSE</option>
+                                <option value="1/2 WIN">1/2 WIN</option>
+                                <option value="NULLA">NULLA</option>
+                            </select>
+                        </div>
+
+                        <button className="btn btn-primary" onClick={handleSubmit} style={{ marginBottom: 10 }}>
+                            Salva Scommessa
+                        </button>
+                        <button className="btn btn-secondary" onClick={onClose}>
+                            Annulla
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // Stats View
+        function StatsView({ slots, bets, getSlotStats }) {
+            const allBets = bets;
+            const totalWins = allBets.filter(b => b.esito === 'WIN' || b.esito === '1/2 WIN').length;
+            const totalLosses = allBets.filter(b => b.esito === 'LOSE').length;
+            const totalNulla = allBets.filter(b => b.esito === 'NULLA').length;
+            const totalPuntato = allBets.reduce((sum, b) => sum + b.stake, 0);
+            const totalGuadagno = allBets.reduce((sum, b) => sum + b.guadagno, 0);
+
+            return (
+                <div className="content">
+                    <h2 style={{ marginBottom: 20 }}>📊 Statistiche Globali</h2>
+                    
+                    <div className="card">
+                        <div className="stats-row">
+                            <span>Totale Scommesse</span>
+                            <strong>{allBets.length}</strong>
+                        </div>
+                        <div className="stats-row">
+                            <span>Vittorie</span>
+                            <strong style={{ color: 'var(--green)' }}>{totalWins}</strong>
+                        </div>
+                        <div className="stats-row">
+                            <span>Perdite</span>
+                            <strong style={{ color: 'var(--red)' }}>{totalLosses}</strong>
+                        </div>
+                        <div className="stats-row">
+                            <span>Nulle</span>
+                            <strong style={{ color: 'var(--yellow)' }}>{totalNulla}</strong>
+                        </div>
+                        <div className="stats-row">
+                            <span>Win Rate</span>
+                            <strong>
+                                {allBets.length > 0 ? ((totalWins / (allBets.length - totalNulla)) * 100).toFixed(1) : 0}%
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="stats-row">
+                            <span>Totale Puntato</span>
+                            <strong>€{totalPuntato.toFixed(2)}</strong>
+                        </div>
+                        <div className="stats-row">
+                            <span>Guadagno Totale</span>
+                            <strong style={{ color: totalGuadagno >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                                {totalGuadagno >= 0 ? '+' : ''}€{totalGuadagno.toFixed(2)}
+                            </strong>
+                        </div>
+                        <div className="stats-row">
+                            <span>ROI Globale</span>
+                            <strong style={{ color: totalGuadagno >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                                {totalPuntato > 0 ? ((totalGuadagno / totalPuntato) * 100).toFixed(2) : 0}%
+                            </strong>
+                        </div>
+                    </div>
+
+                    <h3 style={{ margin: '20px 0 15px', opacity: 0.8 }}>Performance per Slot</h3>
+                    {SLOT_IDS.map(id => {
+                        const slotStats = getSlotStats(id);
+                        const slot = slots[id];
+                        if (!slot) return null;
+
+                        return (
+                            <div key={id} className="card" style={{ marginBottom: 10 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <strong>Slot {id}</strong>
+                                        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>{slotStats.bets} bets</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ color: slotStats.profitto >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                                            {slotStats.profitto >= 0 ? '+' : ''}€{slotStats.profitto.toFixed(2)}
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                                            ROI: {(slotStats.roi * 100).toFixed(1)}%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        // Settings View
+        function SettingsView({ settings, slots, onSaveSettings, onSaveSlot }) {
+            const [editingSlot, setEditingSlot] = useState(null);
+            const [tempSlot, setTempSlot] = useState(null);
+
+            const handleEditSlot = (slot) => {
+                setEditingSlot(slot.id);
+                setTempSlot({ ...slot });
+            };
+
+            const handleSaveSlot = () => {
+                onSaveSlot(tempSlot);
+                setEditingSlot(null);
+                setTempSlot(null);
+            };
+
+            const exportData = async () => {
+                const allBets = await fbGetAll('bets');
+                const allSlots = await fbGetAll('slots');
+                const data = {
+                    slots: allSlots,
+                    bets: allBets,
+                    settings,
+                    exportDate: new Date().toISOString()
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `magic-over-backup-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+            };
+
+            const importData = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+
+                        // Clear existing data
+                        await fbClear('slots');
+                        await fbClear('bets');
+
+                        // Import slots
+                        for (const slot of data.slots) {
+                            await fbSet('slots', slot);
+                        }
+
+                        // Import bets
+                        for (const bet of data.bets) {
+                            await fbAdd('bets', bet);  // Firebase genera ID automaticamente
+                        }
+
+                        alert('Dati importati con successo! Ricarica la pagina.');
+                        window.location.reload();
+                    } catch (err) {
+                        alert('Errore durante l\'importazione: ' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            return (
+                <div className="content">
+                    <h2 style={{ marginBottom: 20 }}>⚙️ Impostazioni</h2>
+
+                    <div className="card">
+                        <h3 style={{ marginBottom: 15 }}>Configurazione Slots</h3>
+                        {SLOT_IDS.map(id => {
+                            const slot = slots[id];
+                            if (!slot) return null;
+
+                            return (
+                                <div key={id} className="settings-item">
+                                    <div>
+                                        <strong>Slot {id}</strong>
+                                        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                                            Cassa: €{slot.cassaIniziale} | Stake: {(slot.stakePerc * 100)}%
+                                        </div>
+                                    </div>
+                                    <button 
+                                        className="btn btn-secondary" 
+                                        style={{ width: 'auto', padding: '8px 15px' }}
+                                        onClick={() => handleEditSlot(slot)}
+                                    >
+                                        Modifica
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="card">
+                        <h3 style={{ marginBottom: 15 }}>Backup & Restore</h3>
+                        <button className="btn btn-primary" onClick={exportData} style={{ marginBottom: 10 }}>
+                            📤 Esporta Dati
+                        </button>
+                        <label className="btn btn-secondary" style={{ display: 'block', textAlign: 'center', marginBottom: 10 }}>
+                            📥 Importa Dati
+                            <input type="file" accept=".json" onChange={importData} style={{ display: 'none' }} />
+                        </label>
+                        <button
+                            className="btn btn-danger"
+                            onClick={() => {
+                                if (confirm('⚠️ Questo cancellerà TUTTI i dati e ricaricherà la pagina. Sei sicuro?')) {
+                                    resetDB().then(() => window.location.reload());
+                                }
+                            }}
+                        >
+                            🗑️ Reset Database
+                        </button>
+                    </div>
+
+                    <div className="card">
+                        <h3 style={{ marginBottom: 15 }}>Info App</h3>
+                        <div className="stats-row">
+                            <span>Versione</span>
+                            <strong>1.0.0</strong>
+                        </div>
+                        <div className="stats-row">
+                            <span>Storage</span>
+                            <strong>IndexedDB</strong>
+                        </div>
+                    </div>
+
+                    {editingSlot && tempSlot && (
+                        <div className="modal-overlay" onClick={() => setEditingSlot(null)}>
+                            <div className="modal" onClick={e => e.stopPropagation()}>
+                                <div className="modal-title">Modifica Slot {editingSlot}</div>
+                                
+                                <div className="input-group">
+                                    <label>Cassa Iniziale (€)</label>
+                                    <input 
+                                        type="number" 
+                                        value={tempSlot.cassaIniziale}
+                                        onChange={e => setTempSlot({ ...tempSlot, cassaIniziale: parseFloat(e.target.value) })}
+                                    />
+                                </div>
+
+                                <div className="input-group">
+                                    <label>Stake Base (%)</label>
+                                    <input 
+                                        type="number" 
+                                        step="0.01"
+                                        value={tempSlot.stakePerc * 100}
+                                        onChange={e => setTempSlot({ ...tempSlot, stakePerc: parseFloat(e.target.value) / 100 })}
+                                    />
+                                </div>
+
+                                <div className="input-group">
+                                    <label>Modalità Recupero</label>
+                                    <select 
+                                        value={tempSlot.recupero}
+                                        onChange={e => setTempSlot({ ...tempSlot, recupero: e.target.value })}
+                                    >
+                                        <option value="Alto">Alto</option>
+                                        <option value="Basso">Basso</option>
+                                        <option value="Nessuno">Nessuno</option>
+                                    </select>
+                                </div>
+
+                                <div className="input-group">
+                                    <label>Stop Win (%)</label>
+                                    <input 
+                                        type="number" 
+                                        step="0.01"
+                                        value={tempSlot.stopWin || ''}
+                                        onChange={e => setTempSlot({ ...tempSlot, stopWin: e.target.value ? parseFloat(e.target.value) : null })}
+                                        placeholder="Lascia vuoto per disabilitare"
+                                    />
+                                </div>
+
+                                <div className="input-group">
+                                    <label>Stop Lose (%)</label>
+                                    <input 
+                                        type="number" 
+                                        step="0.01"
+                                        value={tempSlot.stopLose || ''}
+                                        onChange={e => setTempSlot({ ...tempSlot, stopLose: e.target.value ? parseFloat(e.target.value) : null })}
+                                        placeholder="Lascia vuoto per disabilitare"
+                                    />
+                                </div>
+
+                                <button className="btn btn-primary" onClick={handleSaveSlot} style={{ marginBottom: 10 }}>
+                                    Salva
+                                </button>
+                                <button className="btn btn-secondary" onClick={() => setEditingSlot(null)}>
+                                    Annulla
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Render App
+        ReactDOM.render(<App />, document.getElementById('root'));
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker registered'))
+                .catch(err => console.log('Service Worker registration failed:', err));
+        }
+    </script>
+</body>
+</html>

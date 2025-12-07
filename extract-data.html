@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estrazione Dati Slot A</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #fff;
+        }
+        button {
+            background: #00d26a;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #00b359;
+        }
+        .output {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #00d26a;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th {
+            background: rgba(255,255,255,0.05);
+            font-weight: bold;
+        }
+        .win { color: #00d26a; }
+        .lose { color: #ff4757; }
+        .half { color: #ffa502; }
+        .null { color: #aaa; }
+        h1, h2 {
+            color: #00d26a;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 Estrazione Dati Slot A - Magic Over</h1>
+
+    <div>
+        <button onclick="extractSlotData()">Estrai Dati Slot A</button>
+        <button onclick="downloadJSON()">Scarica JSON</button>
+        <button onclick="downloadCSV()">Scarica CSV</button>
+    </div>
+
+    <div id="stats"></div>
+    <div id="betsTable"></div>
+    <div id="output" class="output"></div>
+
+    <script>
+        let slotData = null;
+        let betsData = null;
+
+        async function extractSlotData() {
+            try {
+                // Apri IndexedDB
+                const request = indexedDB.open('MagicOverDB', 3);
+
+                request.onerror = () => {
+                    document.getElementById('output').textContent =
+                        '❌ Errore: Impossibile aprire il database. Assicurati di aver aperto questa pagina dallo stesso dominio dell\'app.';
+                };
+
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+
+                    // Estrai dati dello slot A
+                    const slotTransaction = db.transaction(['slots'], 'readonly');
+                    const slotStore = slotTransaction.objectStore('slots');
+                    const slotRequest = slotStore.get('A');
+
+                    slotRequest.onsuccess = () => {
+                        slotData = slotRequest.result;
+
+                        // Estrai tutte le scommesse dello slot A
+                        const betsTransaction = db.transaction(['bets'], 'readonly');
+                        const betsStore = betsTransaction.objectStore('bets');
+                        const betsIndex = betsStore.index('slotId');
+                        const betsRequest = betsIndex.getAll('A');
+
+                        betsRequest.onsuccess = () => {
+                            betsData = betsRequest.result;
+                            displayData();
+                        };
+
+                        betsRequest.onerror = () => {
+                            document.getElementById('output').textContent =
+                                '❌ Errore nel recupero delle scommesse';
+                        };
+                    };
+
+                    slotRequest.onerror = () => {
+                        document.getElementById('output').textContent =
+                            '❌ Errore nel recupero dello slot A';
+                    };
+                };
+
+            } catch (error) {
+                document.getElementById('output').textContent =
+                    '❌ Errore: ' + error.message;
+            }
+        }
+
+        function displayData() {
+            if (!slotData || !betsData) {
+                document.getElementById('output').textContent =
+                    '⚠️ Nessun dato trovato per lo slot A';
+                return;
+            }
+
+            // Calcola statistiche
+            const totalBets = betsData.length;
+            const completedBets = betsData.filter(b => b.esito).length;
+            const wins = betsData.filter(b => b.esito === 'WIN').length;
+            const losses = betsData.filter(b => b.esito === 'LOSE').length;
+            const halfWins = betsData.filter(b => b.esito === '1/2 WIN').length;
+            const nulls = betsData.filter(b => b.esito === 'NULLA').length;
+            const pending = totalBets - completedBets;
+
+            const totalStaked = betsData.reduce((sum, b) => sum + (parseFloat(b.stake) || 0), 0);
+            const totalWinnings = betsData.reduce((sum, b) => sum + (parseFloat(b.vincita) || 0), 0);
+            const totalProfit = betsData.reduce((sum, b) => sum + (parseFloat(b.guadagno) || 0), 0);
+
+            const winRate = completedBets > 0 ? (wins / completedBets * 100).toFixed(2) : 0;
+            const roi = totalStaked > 0 ? ((totalProfit / totalStaked) * 100).toFixed(2) : 0;
+
+            const performance = slotData.cassaIniziale > 0
+                ? (((slotData.cassaCorrente - slotData.cassaIniziale) / slotData.cassaIniziale) * 100).toFixed(2)
+                : 0;
+
+            // Mostra statistiche
+            document.getElementById('stats').innerHTML = `
+                <h2>📈 Statistiche Slot A</h2>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-label">Nome Slot</div>
+                        <div class="stat-value">${slotData.name || 'Slot A'}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Cassa Iniziale</div>
+                        <div class="stat-value">€${slotData.cassaIniziale.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Cassa Corrente</div>
+                        <div class="stat-value">€${slotData.cassaCorrente.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Performance</div>
+                        <div class="stat-value" style="color: ${performance >= 0 ? '#00d26a' : '#ff4757'}">${performance}%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Totale Scommesse</div>
+                        <div class="stat-value">${totalBets}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Vincite / Perdite</div>
+                        <div class="stat-value">${wins} / ${losses}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Win Rate</div>
+                        <div class="stat-value">${winRate}%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">ROI</div>
+                        <div class="stat-value" style="color: ${roi >= 0 ? '#00d26a' : '#ff4757'}">${roi}%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Totale Puntato</div>
+                        <div class="stat-value">€${totalStaked.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Totale Vincite</div>
+                        <div class="stat-value">€${totalWinnings.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Profitto/Perdita</div>
+                        <div class="stat-value" style="color: ${totalProfit >= 0 ? '#00d26a' : '#ff4757'}">€${totalProfit.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Stake %</div>
+                        <div class="stat-value">${slotData.stakePerc}%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Modalità Recupero</div>
+                        <div class="stat-value">${slotData.recupero || 'Nessuno'}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Stop Win</div>
+                        <div class="stat-value">${slotData.stopWin || 'Non impostato'}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Stop Lose</div>
+                        <div class="stat-value">${slotData.stopLose || 'Non impostato'}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">In Attesa</div>
+                        <div class="stat-value">${pending}</div>
+                    </div>
+                </div>
+            `;
+
+            // Mostra tabella scommesse
+            let tableHTML = `
+                <h2>📋 Storico Scommesse (${totalBets} totali)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Data</th>
+                            <th>Evento</th>
+                            <th>Quota</th>
+                            <th>Stake</th>
+                            <th>Esito</th>
+                            <th>Vincita</th>
+                            <th>Guadagno</th>
+                            <th>Cassa Post</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            betsData.sort((a, b) => a.step - b.step).forEach((bet, index) => {
+                const esitoClass = bet.esito === 'WIN' ? 'win' :
+                                  bet.esito === 'LOSE' ? 'lose' :
+                                  bet.esito === '1/2 WIN' ? 'half' : 'null';
+
+                const dataFormatted = bet.data ? new Date(bet.data).toLocaleDateString('it-IT') : '-';
+
+                tableHTML += `
+                    <tr>
+                        <td>${bet.step}</td>
+                        <td>${dataFormatted}</td>
+                        <td>${bet.evento || '-'}</td>
+                        <td>${bet.quota ? bet.quota.toFixed(2) : '-'}</td>
+                        <td>€${bet.stake ? bet.stake.toFixed(2) : '0.00'}</td>
+                        <td class="${esitoClass}">${bet.esito || 'In attesa'}</td>
+                        <td>€${bet.vincita ? bet.vincita.toFixed(2) : '0.00'}</td>
+                        <td class="${bet.guadagno >= 0 ? 'win' : 'lose'}">€${bet.guadagno ? bet.guadagno.toFixed(2) : '0.00'}</td>
+                        <td>€${bet.postCassa ? bet.postCassa.toFixed(2) : '-'}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table>';
+            document.getElementById('betsTable').innerHTML = tableHTML;
+
+            // Mostra JSON raw
+            document.getElementById('output').textContent =
+                '✅ Dati estratti con successo!\n\n' +
+                'DATI SLOT A:\n' +
+                JSON.stringify(slotData, null, 2) + '\n\n' +
+                `SCOMMESSE (${betsData.length}):\n` +
+                JSON.stringify(betsData, null, 2);
+        }
+
+        function downloadJSON() {
+            if (!slotData || !betsData) {
+                alert('Estrai prima i dati cliccando su "Estrai Dati Slot A"');
+                return;
+            }
+
+            const data = {
+                slot: slotData,
+                bets: betsData,
+                exportDate: new Date().toISOString(),
+                summary: {
+                    totalBets: betsData.length,
+                    completedBets: betsData.filter(b => b.esito).length,
+                    totalStaked: betsData.reduce((sum, b) => sum + (parseFloat(b.stake) || 0), 0),
+                    totalProfit: betsData.reduce((sum, b) => sum + (parseFloat(b.guadagno) || 0), 0)
+                }
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `slot-A-data-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadCSV() {
+            if (!betsData) {
+                alert('Estrai prima i dati cliccando su "Estrai Dati Slot A"');
+                return;
+            }
+
+            let csv = 'Step,Data,Evento,Quota,Stake,Esito,Vincita,Guadagno,Cassa Pre,Cassa Post\n';
+
+            betsData.sort((a, b) => a.step - b.step).forEach(bet => {
+                const row = [
+                    bet.step,
+                    bet.data ? new Date(bet.data).toLocaleDateString('it-IT') : '',
+                    `"${(bet.evento || '').replace(/"/g, '""')}"`,
+                    bet.quota || '',
+                    bet.stake || '',
+                    bet.esito || '',
+                    bet.vincita || '',
+                    bet.guadagno || '',
+                    bet.preCassa || '',
+                    bet.postCassa || ''
+                ].join(',');
+                csv += row + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `slot-A-bets-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Estrai automaticamente al caricamento della pagina
+        window.addEventListener('load', () => {
+            // Attendi un po' per assicurarsi che IndexedDB sia disponibile
+            setTimeout(extractSlotData, 500);
+        });
+    </script>
+</body>
+</html>
