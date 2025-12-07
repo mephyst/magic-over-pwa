@@ -329,6 +329,7 @@
                             <div style="display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
                                 <span class="code-status status-${status}">${statusText}</span>
                                 <button class="copy-btn" onclick="copyCode('${code}')">📋 Copia</button>
+                                ${status === 'used' && !data.revoked ? `<button class="copy-btn" onclick="resetCode('${code}')" style="background: rgba(255,165,2,0.3);">🔄 Reset</button>` : ''}
                                 ${!data.revoked ? `<button class="copy-btn" onclick="revokeCode('${code}')" style="background: rgba(255,71,87,0.3);">🚫 Revoca</button>` : ''}
                             </div>
                         </div>
@@ -373,6 +374,26 @@
             navigator.clipboard.writeText(code).then(() => {
                 showAlert(`📋 Codice ${code} copiato!`, 'success');
             });
+        }
+
+        // Reset code (for users who made mistakes during activation)
+        async function resetCode(code) {
+            if (!confirm(`Vuoi resettare il codice ${code}?\n\nQuesta operazione:\n• Cancellerà l'attivazione corrente\n• Permetterà all'utente di riutilizzare il codice\n• Non eliminerà il nome utente associato\n\nContinuare?`)) {
+                return;
+            }
+
+            try {
+                await db.ref('codes/' + code).update({
+                    activatedAt: null,
+                    deviceId: null,
+                    deviceCount: 0
+                });
+                showAlert(`✅ Codice ${code} resettato e pronto per essere riutilizzato`, 'success');
+                loadAllCodes();
+            } catch (error) {
+                console.error('Errore reset codice:', error);
+                showAlert('❌ Errore nel reset del codice', 'danger');
+            }
         }
 
         // Revoke code
