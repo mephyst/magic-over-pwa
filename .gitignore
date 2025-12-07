@@ -13,3 +13,10 @@ Thumbs.db
 
 # Temporary files
 *.tmp
+
+# Utility files (local only, not for distribution)
+simulator.html
+simulator-formula-esatta.html
+extract-data.html
+SDK Firebase.txt
+raccomandazioni-immediate.md
