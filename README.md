@@ -1,154 +1,119 @@
-# Magic Over PWA - Betting Progress Manager
+# Magic Over - Betting Manager
 
-## 📱 Installazione su Smartphone
-
-### Metodo 1: Server Locale (Consigliato)
-
-Per usare la PWA in locale sul tuo smartphone, hai bisogno di un semplice server web. Ecco le opzioni:
-
-#### Opzione A: Python (se hai Python installato sul PC)
-
-1. Metti tutti i file in una cartella (es. `magic-over`)
-2. Apri il terminale/prompt nella cartella
-3. Esegui:
-   ```bash
-   python -m http.server 8080
-   ```
-4. Sul telefono, collegati alla stessa rete WiFi del PC
-5. Apri il browser e vai a: `http://[IP-DEL-TUO-PC]:8080`
-   - Per trovare l'IP: su Windows `ipconfig`, su Mac/Linux `ifconfig`
-
-#### Opzione B: Servizio cloud gratuito (Più semplice)
-
-1. Crea un account su [Netlify](https://www.netlify.com/) o [Vercel](https://vercel.com/)
-2. Trascina la cartella con i file sul sito
-3. Ottieni un URL pubblico accessibile da qualsiasi dispositivo
-
-#### Opzione C: File locale (Limitazioni)
-
-Puoi aprire `index.html` direttamente nel browser, ma:
-- Il Service Worker non funzionerà (no offline mode)
-- L'app non sarà installabile
-- I dati saranno comunque salvati in IndexedDB
-
-### Metodo 2: Installazione come App
-
-Una volta aperto nel browser:
-
-**Android (Chrome):**
-1. Apri la pagina nel browser Chrome
-2. Tocca i tre puntini in alto a destra
-3. Seleziona "Installa app" o "Aggiungi a schermata Home"
-
-**iPhone (Safari):**
-1. Apri la pagina in Safari
-2. Tocca l'icona di condivisione (quadrato con freccia)
-3. Scorri e seleziona "Aggiungi a Home"
+Gestisci le tue scommesse sportive con progressioni personalizzate, 8 slot indipendenti e sincronizzazione cloud automatica.
 
 ---
 
-## 🎯 Funzionalità
+## 📱 Come Installare l'App sullo Smartphone
 
-### Dashboard
-- Visualizza il bankroll totale
-- Monitora lo stato di tutti gli 8 slot (A-H)
-- Identifica slot in attenzione (giallo) o critici (rosso)
+### Passo 1: Apri l'app nel browser
 
-### Gestione Slot
-- 8 slot indipendenti (A-H)
-- Ogni slot ha la propria cassa e progressione
-- Registrazione scommesse con esiti: WIN, LOSE, 1/2 WIN, NULLA
-- Calcolo automatico di stake, vincita e guadagno
+Apri il link che ti è stato fornito nel browser del tuo smartphone.
 
-### Statistiche
-- ROI globale e per slot
-- Win rate e precisione
-- Totale puntato e guadagni
+### Passo 2: Inserisci il codice di accesso
 
-### Impostazioni
-- Configurazione individuale di ogni slot
-- Cassa iniziale personalizzabile
-- Stake base (% della cassa)
-- Modalità recupero (Alto, Basso, Nessuno)
-- Stop Win / Stop Lose opzionali
+Al primo avvio ti verrà chiesto di inserire il **codice di accesso** che ti è stato fornito. Questo codice protegge i tuoi dati e ti permette di accedere da più dispositivi.
 
-### Backup & Restore
-- Esporta tutti i dati in formato JSON
-- Importa dati da backup precedenti
-- Perfetto per trasferire dati tra dispositivi
+### Passo 3: Installa l'app sulla schermata Home
+
+**Su Android (Chrome):**
+1. Tocca i **tre puntini** in alto a destra
+2. Seleziona **"Installa app"** o **"Aggiungi a schermata Home"**
+3. Conferma l'installazione
+
+**Su iPhone (Safari):**
+1. Tocca l'icona di **condivisione** (quadrato con freccia in basso)
+2. Scorri in basso e seleziona **"Aggiungi a Home"**
+3. Conferma con **"Aggiungi"**
+
+Dopo l'installazione, l'app apparirà come un'icona sulla tua schermata Home e si aprirà a schermo intero come un'app nativa.
 
 ---
 
-## 💾 Persistenza Dati
+## 🎯 Cosa Puoi Fare con Magic Over
 
-I dati sono salvati su **Firebase Realtime Database**, un database cloud che offre:
-- **Sincronizzazione automatica** tra dispositivi
-- **Backup automatico** su cloud
-- **Accesso da qualsiasi dispositivo** con lo stesso codice
-- **Funzionamento offline** con sincronizzazione automatica alla riconnessione
-- Persistenza permanente dei dati
+### 📊 Dashboard
+- Visualizza il tuo **bankroll totale**
+- Controlla lo stato di tutti gli **8 slot** (A-H)
+- Identifica rapidamente slot in **attenzione** (giallo) o **critici** (rosso)
 
-### Sistema di Autenticazione
+### 🎰 Gestione Slot
+- **8 slot indipendenti** (da A a H) per diverse strategie
+- Ogni slot ha la propria **cassa e progressione**
+- Registra le scommesse con diversi esiti:
+  - ✅ **WIN** (vinta)
+  - ❌ **LOSE** (persa)
+  - ⚠️ **1/2 WIN** (parzialmente vinta)
+  - ⏸️ **NULLA** (annullata/rimborsata)
+- Calcolo **automatico** di stake, vincita e guadagno
 
-L'app utilizza un sistema di **codici di accesso** per proteggere i tuoi dati:
-- Al primo avvio, inserisci un codice di accesso valido
-- Il dispositivo viene registrato e associato al tuo account
-- I dati sono salvati in un percorso privato: `users/{deviceId}/`
-- Lo stesso codice può essere usato su più dispositivi per accedere agli stessi dati
+### 📈 Statistiche
+- **ROI globale** e per singolo slot
+- **Win rate** e precisione delle tue scommesse
+- Totale **puntato** e **guadagni**
+- Storico completo di tutte le scommesse
 
-**IMPORTANTE:**
-- Ricorda il tuo codice di accesso per accedere da altri dispositivi
-- I dati sono sincronizzati automaticamente tra tutti i tuoi dispositivi
-- La funzione di backup è disponibile per esportazioni aggiuntive
+### ⚙️ Impostazioni Personalizzabili
+Configura ogni slot in modo indipendente:
+- **Cassa iniziale** personalizzabile
+- **Stake base** (percentuale della cassa)
+- **Modalità recupero**: Alto, Basso o Nessuno
+- **Stop Win** e **Stop Lose** opzionali per proteggere i profitti e limitare le perdite
+
+### 💾 Backup & Restore
+- **Esporta** tutti i dati in formato JSON
+- **Importa** dati da backup precedenti
+- Utile per avere una copia di sicurezza locale
 
 ---
 
-## 📁 File Inclusi
+## 🔐 Sicurezza e Sincronizzazione Dati
 
-```
-magic-over-pwa/
-├── index.html      # App principale
-├── manifest.json   # Configurazione PWA
-├── sw.js           # Service Worker (offline)
-├── icon-192.png    # Icona piccola
-├── icon-512.png    # Icona grande
-└── README.md       # Questo file
-```
+I tuoi dati sono:
+- ✅ **Salvati automaticamente** su cloud sicuro (Firebase)
+- ✅ **Sincronizzati** in tempo reale tra tutti i tuoi dispositivi
+- ✅ **Protetti** dal tuo codice di accesso personale
+- ✅ **Disponibili offline**: puoi usare l'app senza connessione, i dati si sincronizzeranno automaticamente quando torni online
+
+### Multi-dispositivo
+Puoi usare la stessa app su **più dispositivi** (smartphone, tablet, computer) contemporaneamente. Basta inserire lo stesso codice di accesso e tutti i dati saranno sincronizzati automaticamente.
 
 ---
 
 ## 🔧 Requisiti
 
-- Browser moderno (Chrome, Safari, Firefox, Edge)
-- **Connessione internet** per la sincronizzazione Firebase
-- Codice di accesso valido (fornito dall'amministratore)
-- Funziona offline dopo il primo caricamento (i dati si sincronizzano alla riconnessione)
+- **Smartphone** con browser moderno (Chrome, Safari, Firefox, Edge)
+- **Connessione internet** per la sincronizzazione (funziona anche offline dopo il primo caricamento)
+- **Codice di accesso** fornito dall'amministratore
 
 ---
 
-## 🔑 Gestione Codici di Accesso (Solo Amministratori)
+## ⚠️ Informazioni Importanti
 
-Per creare nuovi codici di accesso, è necessario accedere alla console Firebase:
-
-1. Vai su [Firebase Console](https://console.firebase.google.com/)
-2. Seleziona il progetto **magic-over-auth**
-3. Vai su **Realtime Database**
-4. Aggiungi un nuovo codice nel percorso `codes/`:
-   ```
-   codes/
-     └── TUO-CODICE/
-           ├── active: true
-           └── description: "Descrizione utente"
-   ```
-
-I codici devono essere in **MAIUSCOLO** e possono essere alfanumerici.
+- 📝 **Conserva il tuo codice di accesso**: ne avrai bisogno per accedere da nuovi dispositivi
+- 🔄 **Dati sempre sincronizzati**: tutte le modifiche sono salvate automaticamente sul cloud
+- 📱 **Usa su più dispositivi**: accedi con lo stesso codice da smartphone, tablet o computer
+- 🔒 **Sicurezza**: se perdi il codice di accesso, non potrai più recuperare i tuoi dati
+- 💾 **Backup consigliato**: usa la funzione di esportazione per creare copie di sicurezza locali periodiche
 
 ---
 
-## ⚠️ Note
+## ❓ Domande Frequenti
 
-- **I tuoi dati sono al sicuro su Firebase Cloud** e sincronizzati automaticamente
-- Conserva il tuo **codice di accesso**: è necessario per accedere da nuovi dispositivi
-- Puoi usare la stessa app su più dispositivi contemporaneamente
-- La funzione di backup/export rimane disponibile per esportazioni locali aggiuntive
-- Se perdi il codice di accesso, non potrai più accedere ai tuoi dati
+**Posso usare l'app senza connessione internet?**
+Sì! Dopo il primo caricamento, l'app funziona anche offline. I dati verranno sincronizzati automaticamente quando tornerai online.
+
+**Cosa succede se cambio telefono?**
+Installa l'app sul nuovo dispositivo e inserisci il tuo codice di accesso. Tutti i tuoi dati saranno disponibili immediatamente.
+
+**Come faccio se perdo il codice di accesso?**
+Contatta l'amministratore che ti ha fornito il codice. I dati non possono essere recuperati senza il codice.
+
+**I miei dati sono al sicuro?**
+Sì, i dati sono salvati su server sicuri Firebase (Google Cloud) e protetti dal tuo codice di accesso personale.
+
+---
+
+## 📞 Supporto
+
+Per problemi tecnici o domande, contatta l'amministratore che ti ha fornito il codice di accesso.
