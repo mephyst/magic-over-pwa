@@ -380,6 +380,7 @@
 
             const cleanCode = code.trim().toUpperCase();
             const codeRef = firebaseDb.ref('codes/' + cleanCode);
+            const MAX_DEVICES = 2;
 
             try {
                 const snapshot = await codeRef.once('value');
@@ -394,27 +395,57 @@
                 }
 
                 const deviceId = getDeviceId();
+                const devicesRef = firebaseDb.ref(`codes/${cleanCode}/devices`);
+                const devicesSnapshot = await devicesRef.once('value');
+                const devices = devicesSnapshot.val() || {};
 
-                // Se il codice non è mai stato attivato
-                if (!codeData.activatedAt) {
-                    await codeRef.update({
-                        activatedAt: new Date().toISOString(),
-                        deviceId: deviceId,
-                        deviceCount: 1
+                // Controlla se questo dispositivo è già registrato
+                if (devices[deviceId]) {
+                    // Aggiorna ultimo accesso
+                    await devicesRef.child(deviceId).update({
+                        lastAccess: new Date().toISOString()
                     });
-                    return { valid: true };
+
+                    // 🔄 MIGRAZIONE AUTOMATICA: controlla se esistono dati legacy
+                    await migrateUserDataIfNeeded(deviceId, cleanCode);
+
+                    return { valid: true, code: cleanCode };
                 }
 
-                // Se è già stato attivato, verifica il deviceId
-                if (codeData.deviceId === deviceId) {
-                    return { valid: true };
+                // Conta dispositivi registrati
+                const deviceCount = Object.keys(devices).length;
+
+                // Se abbiamo raggiunto il limite
+                if (deviceCount >= MAX_DEVICES) {
+                    return {
+                        valid: false,
+                        error: `Limite di ${MAX_DEVICES} dispositivi raggiunto. Contatta l'amministratore per gestire i dispositivi.`
+                    };
                 }
 
-                // Codice già usato da altro dispositivo
-                return {
-                    valid: false,
-                    error: 'Codice già utilizzato su un altro dispositivo'
+                // Registra nuovo dispositivo
+                await devicesRef.child(deviceId).set({
+                    registeredAt: new Date().toISOString(),
+                    lastAccess: new Date().toISOString()
+                });
+
+                // Aggiorna il codice con informazioni legacy compatibility
+                const updates = {
+                    deviceCount: deviceCount + 1
                 };
+
+                // Prima attivazione in assoluto
+                if (!codeData.activatedAt) {
+                    updates.activatedAt = new Date().toISOString();
+                    updates.deviceId = deviceId; // Mantieni per compatibilità
+                }
+
+                await codeRef.update(updates);
+
+                // 🔄 MIGRAZIONE AUTOMATICA: controlla se esistono dati legacy
+                await migrateUserDataIfNeeded(deviceId, cleanCode);
+
+                return { valid: true, code: cleanCode };
 
             } catch (error) {
                 console.error('Errore verifica codice:', error);
@@ -422,6 +453,45 @@
                     valid: false,
                     error: 'Errore di connessione. Riprova.'
                 };
+            }
+        };
+
+        // 🔄 MIGRAZIONE AUTOMATICA: sposta dati da users/{deviceId} a users/{code}
+        const migrateUserDataIfNeeded = async (deviceId, code) => {
+            try {
+                const legacyPath = `users/${deviceId}`;
+                const newPath = `users/${code}`;
+
+                // Controlla se esiste il percorso nuovo
+                const newDataSnapshot = await firebaseDb.ref(newPath).once('value');
+                if (newDataSnapshot.exists()) {
+                    // Dati già migrati o già presenti
+                    return;
+                }
+
+                // Controlla se esistono dati legacy
+                const legacySnapshot = await firebaseDb.ref(legacyPath).once('value');
+                if (!legacySnapshot.exists()) {
+                    // Nessun dato da migrare
+                    return;
+                }
+
+                const legacyData = legacySnapshot.val();
+                console.log('🔄 Migrazione dati da', legacyPath, 'a', newPath);
+
+                // Copia i dati nel nuovo percorso
+                await firebaseDb.ref(newPath).set(legacyData);
+
+                // Marca i dati legacy come migrati (non li cancelliamo per sicurezza)
+                await firebaseDb.ref(`${legacyPath}/_migrated`).set({
+                    migratedAt: new Date().toISOString(),
+                    migratedTo: code
+                });
+
+                console.log('✅ Migrazione completata con successo');
+            } catch (error) {
+                console.error('❌ Errore durante la migrazione:', error);
+                // Non blocchiamo l'accesso se la migrazione fallisce
             }
         };
 
@@ -543,6 +613,13 @@
 
         // Ottieni il percorso Firebase per questo utente
         const getUserPath = () => {
+            // Usa il codice di accesso come identificativo (multi-dispositivo)
+            const code = getStoredAuthCode();
+            if (code) {
+                return `users/${code}`;
+            }
+
+            // Fallback per compatibilità (non dovrebbe mai succedere se autenticati)
             const deviceId = getDeviceId();
             return `users/${deviceId}`;
         };
@@ -698,16 +775,26 @@
             const stakePerc = slot.stakePerc || 0.02;       // $B$2
             const cassaCorrente = slot.cassaCorrente || 50;  // $B$3
             const quotaMedia = 1.65;                         // $A$4
-            
+
             // Stake base minimo
             const stakeBase = stakePerc * cassaCorrente;
-            
+
             // Se non ci sono scommesse, ritorna stake base
             if (!slotBets || slotBets.length === 0) {
                 return Math.round(stakeBase * 10) / 10;
             }
-            
-            const lastBet = slotBets[slotBets.length - 1];
+
+            const ultimaScommessa = slotBets[slotBets.length - 1];
+
+            // Se l'ultima scommessa è NULLA o in attesa, mantieni lo stesso stake
+            if (!ultimaScommessa.esito || ultimaScommessa.esito === 'NULLA') {
+                return Math.round(ultimaScommessa.stake * 10) / 10;
+            }
+
+            // Filtra le scommesse NULLA e quelle in attesa per i calcoli
+            const betsEffettive = slotBets.filter(b => b.esito && b.esito !== 'NULLA');
+
+            const lastBet = betsEffettive[betsEffettive.length - 1];
             const stakePrecedente = lastBet.stake;           // D93
             const esitoPrecedente = lastBet.esito;           // J93
             const quotaPrec = lastBet.quota || quotaMedia;   // G93
@@ -715,17 +802,17 @@
             
             // Media armonica della quota nuova (singola)
             const mediaArmonicaNuova = newQuota;
-            
-            // Media armonica di TUTTE le quote per calcolo N93
-            const tutteQuote = slotBets.map(b => b.quota).filter(q => q > 0);
+
+            // Media armonica di TUTTE le quote per calcolo N93 (escluse NULLA)
+            const tutteQuote = betsEffettive.map(b => b.quota).filter(q => q > 0);
             const mediaArmonicaTutte = harmonicMean(tutteQuote);
-            
+
             // O93 = percentuale guadagno attuale
             const profitto = cassaCorrente - slot.cassaIniziale;
             const guadagnoPercent = profitto / slot.cassaIniziale;
-            
+
             // N93 = stakePerc / quotaMedia * numScommesse / 1.65 / mediaArmonicaTutte
-            const numScommesse = slotBets.length;
+            const numScommesse = betsEffettive.length;
             const N93 = (stakePerc / quotaMedia) * numScommesse / 1.65 / mediaArmonicaTutte;
             
             // Fattore: (1 - 1/quota)
@@ -2204,7 +2291,7 @@
                         <h3 style={{ marginBottom: 15 }}>Info App</h3>
                         <div className="stats-row">
                             <span>Versione</span>
-                            <strong>1.0.0</strong>
+                            <strong>1.0.1</strong>
                         </div>
                         <div className="stats-row">
                             <span>Storage</span>
